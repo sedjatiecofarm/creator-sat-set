@@ -20,7 +20,7 @@ const db = {
   saveTimer: null,
   async load() {
     try {
-      const response = await fetch(`${API_BASE}/api/db`);
+      const response = await fetch(`${API_BASE}/api/db?workspaceId=${encodeURIComponent(WORKSPACE_ID)}`);
       if (!response.ok) throw new Error("DB backend tidak tersedia.");
       const data = await response.json();
       this.ready = true;
@@ -36,6 +36,7 @@ const db = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        workspaceId: WORKSPACE_ID,
         plans: state.plans,
         blueprints: state.blueprints,
         activeBlueprintId: state.activeBlueprintId,
@@ -67,6 +68,30 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const API_BASE = window.location.protocol === "file:" ? "http://localhost:8787" : "";
 const IS_LOCAL_APP = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+const WORKSPACE_ID = getWorkspaceId();
+
+function getWorkspaceId() {
+  const param = new URLSearchParams(window.location.search).get("workspace");
+  if (param) {
+    const cleanParam = cleanWorkspaceId(param);
+    storage.write("creatorWorkspaceId", cleanParam);
+    return cleanParam;
+  }
+
+  const existing = cleanWorkspaceId(storage.read("creatorWorkspaceId", "null"));
+  if (existing) return existing;
+
+  const next = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  storage.write("creatorWorkspaceId", next);
+  return next;
+}
+
+function cleanWorkspaceId(value) {
+  return String(value || "")
+    .replace(/^"+|"+$/g, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "")
+    .slice(0, 80);
+}
 
 const monthNames = [
   "Januari",

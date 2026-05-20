@@ -260,9 +260,14 @@ function supabaseHeaders(extra = {}) {
   };
 }
 
-async function readSupabaseDb() {
+function resolveStateId(workspaceId) {
+  const cleanId = String(workspaceId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+  return cleanId || supabaseStateId;
+}
+
+async function readSupabaseDb(workspaceId) {
   if (!hasSupabaseConfig()) return defaultDb();
-  const url = `${supabaseUrl}/rest/v1/${supabaseTable}?id=eq.${encodeURIComponent(supabaseStateId)}&select=data`;
+  const url = `${supabaseUrl}/rest/v1/${supabaseTable}?id=eq.${encodeURIComponent(resolveStateId(workspaceId))}&select=data`;
   const response = await fetch(url, { headers: supabaseHeaders() });
   if (!response.ok) throw new Error(`Supabase read failed: ${response.status}`);
   const rows = await response.json();
@@ -270,11 +275,11 @@ async function readSupabaseDb() {
   return data ? { ...defaultDb(), ...data } : defaultDb();
 }
 
-async function writeSupabaseDb(data) {
+async function writeSupabaseDb(data, workspaceId) {
   if (!hasSupabaseConfig()) throw new Error("Supabase env belum lengkap.");
   const payload = [
     {
-      id: supabaseStateId,
+      id: resolveStateId(workspaceId),
       data: { ...defaultDb(), ...data, updatedAt: new Date().toISOString() },
     },
   ];

@@ -3,7 +3,8 @@ const { defaultDb, parseBody, readSupabaseDb, sendJson, writeSupabaseDb } = requ
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      sendJson(res, 200, await readSupabaseDb());
+      const requestUrl = new URL(req.url || "/api/db", "https://creator-sat-set.vercel.app");
+      sendJson(res, 200, await readSupabaseDb(requestUrl.searchParams.get("workspaceId")));
       return;
     }
 
@@ -13,7 +14,7 @@ module.exports = async function handler(req, res) {
         plans: body.plans || {},
         blueprints: body.blueprints || [],
         activeBlueprintId: body.activeBlueprintId ?? null,
-      });
+      }, body.workspaceId);
       sendJson(res, 200, { ok: true });
       return;
     }

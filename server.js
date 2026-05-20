@@ -46,12 +46,14 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === "/api/db" && req.method === "GET") {
-    sendJson(res, 200, await readDb());
+  const requestUrl = new URL(req.url || "/", "http://localhost");
+
+  if (requestUrl.pathname === "/api/db" && req.method === "GET") {
+    sendJson(res, 200, await readDb(requestUrl.searchParams.get("workspaceId")));
     return;
   }
 
-  if (req.url === "/api/db" && req.method === "POST") {
+  if (requestUrl.pathname === "/api/db" && req.method === "POST") {
     await handleSaveDb(req, res);
     return;
   }
@@ -94,35 +96,50 @@ function defaultDb() {
   };
 }
 
-async function readDb() {
-  const cloudDb = await readSupabaseDb();
+async function readDb(workspaceId) {
+  const cloudDb = await readSupabaseDb(workspaceId);
   if (cloudDb) return cloudDb;
 
   try {
     if (!fs.existsSync(dbPath)) return defaultDb();
-    return { ...defaultDb(), ...JSON.parse(fs.readFileSync(dbPath, "utf8")) };
+    const stored = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+    if (stored.workspaces) {
+      return { ...defaultDb(), ...(stored.workspaces[resolveStateId(workspaceId)] || {}) };
+    }
+    return { ...defaultDb(), ...stored };
   } catch (error) {
     return defaultDb();
   }
 }
 
-async function writeDb(data) {
-  const savedToSupabase = await writeSupabaseDb(data);
+async function writeDb(data, workspaceId) {
+  const savedToSupabase = await writeSupabaseDb(data, workspaceId);
   if (savedToSupabase) return;
 
   fs.mkdirSync(dataDir, { recursive: true });
-  fs.writeFileSync(dbPath, JSON.stringify({ ...defaultDb(), ...data, updatedAt: new Date().toISOString() }, null, 2));
+  let stored = { workspaces: {} };
+  if (fs.existsSync(dbPath)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+      stored = existing.workspaces ? existing : { workspaces: { [supabaseStateId]: existing } };
+    } catch (error) {
+      stored = { workspaces: {} };
+    }
+  }
+  stored.workspaces[resolveStateId(workspaceId)] = { ...defaultDb(), ...data, updatedAt: new Date().toISOString() };
+  fs.writeFileSync(dbPath, JSON.stringify(stored, null, 2));
 }
 
 async function handleSaveDb(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
-    const current = await readDb();
+    const workspaceId = body.workspaceId;
+    const current = await readDb(workspaceId);
     await writeDb({
       plans: body.plans || current.plans || {},
       blueprints: body.blueprints || current.blueprints || [],
       activeBlueprintId: body.activeBlueprintId ?? current.activeBlueprintId ?? null,
-    });
+    }, workspaceId);
     sendJson(res, 200, { ok: true });
   } catch (error) {
     sendJson(res, 500, { error: error.message || "Gagal menyimpan database lokal." });
@@ -142,10 +159,15 @@ function supabaseHeaders(extra = {}) {
   };
 }
 
-async function readSupabaseDb() {
+function resolveStateId(workspaceId) {
+  const cleanId = String(workspaceId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+  return cleanId || supabaseStateId;
+}
+
+async function readSupabaseDb(workspaceId) {
   if (!hasSupabaseConfig()) return null;
 
-  const url = `${supabaseUrl}/rest/v1/${supabaseTable}?id=eq.${encodeURIComponent(supabaseStateId)}&select=data`;
+  const url = `${supabaseUrl}/rest/v1/${supabaseTable}?id=eq.${encodeURIComponent(resolveStateId(workspaceId))}&select=data`;
   const response = await fetch(url, {
     headers: supabaseHeaders(),
   });
@@ -160,12 +182,12 @@ async function readSupabaseDb() {
   return data ? { ...defaultDb(), ...data } : defaultDb();
 }
 
-async function writeSupabaseDb(data) {
+async function writeSupabaseDb(data, workspaceId) {
   if (!hasSupabaseConfig()) return false;
 
   const payload = [
     {
-      id: supabaseStateId,
+      id: resolveStateId(workspaceId),
       data: { ...defaultDb(), ...data, updatedAt: new Date().toISOString() },
     },
   ];
