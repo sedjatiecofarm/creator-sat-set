@@ -1,5 +1,7 @@
 # Deploy Creator Sat Set
 
+Kalau tidak punya kartu untuk Render, gunakan panduan `VERCEL.md`.
+
 ## 1. Supabase
 
 1. Buat project di Supabase.
