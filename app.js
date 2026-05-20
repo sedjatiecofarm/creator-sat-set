@@ -66,6 +66,7 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const API_BASE = window.location.protocol === "file:" ? "http://localhost:8787" : "";
+const IS_LOCAL_APP = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
 
 const monthNames = [
   "Januari",
@@ -392,19 +393,25 @@ function getAIContext() {
 }
 
 async function askAI({ topic, instruction, format }) {
-  const response = await fetch(`${API_BASE}/api/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      topic,
-      instruction,
-      format,
-      context: getAIContext(),
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic,
+        instruction,
+        format,
+        context: getAIContext(),
+      }),
+    });
+  } catch (error) {
+    throw new Error(IS_LOCAL_APP ? "Server AI lokal belum aktif." : "API AI cloud gagal dihubungi.");
+  }
+
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || "AI server belum aktif atau gagal merespons.");
+    throw new Error(data.error || `API AI gagal merespons. Status: ${response.status}`);
   }
   return data.text;
 }
@@ -434,8 +441,11 @@ function friendlyAIError(message) {
   if (/GEMINI_API_KEY belum diset/i.test(text)) {
     return "GEMINI_API_KEY belum diset di file .env. Isi key Gemini dulu, lalu restart server.";
   }
-  if (/fetch|ECONNREFUSED|server/i.test(text)) {
+  if (/fetch|ECONNREFUSED|Server AI lokal/i.test(text)) {
     return "Server AI lokal belum aktif. Jalankan start-ai-server.bat, lalu reload halaman.";
+  }
+  if (/API AI cloud|API AI gagal|server/i.test(text)) {
+    return "API AI cloud gagal merespons. Coba ulangi sekali lagi. Kalau masih gagal, cek Environment Variables dan Function Logs di Vercel.";
   }
   return text;
 }
