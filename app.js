@@ -249,6 +249,73 @@ function normalizeOptionText(text) {
     .trim();
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderAIText(text) {
+  const lines = String(text || "").replace(/\r/g, "").split("\n");
+  const html = [];
+  let listOpen = false;
+
+  const closeList = () => {
+    if (listOpen) {
+      html.push("</ul>");
+      listOpen = false;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      closeList();
+      continue;
+    }
+
+    let heading = line.match(/^\*\*(.+?)\*\*:?$/);
+    if (!heading) heading = line.match(/^([A-Z][A-Z0-9 /&()_-]{3,}):?$/);
+    if (heading) {
+      closeList();
+      html.push(`<h3>${formatInline(heading[1])}</h3>`);
+      continue;
+    }
+
+    const bullet = line.match(/^[-*]\s+(.+)/);
+    if (bullet) {
+      if (!listOpen) {
+        html.push("<ul>");
+        listOpen = true;
+      }
+      html.push(`<li>${formatInline(bullet[1])}</li>`);
+      continue;
+    }
+
+    const numbered = line.match(/^(\d+)\.\s+(.+)/);
+    if (numbered) {
+      closeList();
+      html.push(`<p class="numbered"><strong>${numbered[1]}.</strong> ${formatInline(numbered[2])}</p>`);
+      continue;
+    }
+
+    closeList();
+    html.push(`<p>${formatInline(line)}</p>`);
+  }
+
+  closeList();
+  return html.join("");
+}
+
+function formatInline(text) {
+  return escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`(.+?)`/g, "<code>$1</code>");
+}
+
 function generationInstruction(part) {
   const map = {
     hook:
@@ -527,7 +594,7 @@ async function generateOptions(part, topic, container, parts, draftTarget, trigg
 
     const content = document.createElement("div");
     content.className = "choice-text";
-    content.textContent = optionText;
+    content.innerHTML = renderAIText(optionText);
 
     const actions = document.createElement("div");
     actions.className = "choice-actions";
@@ -858,7 +925,7 @@ $("#ideaForm").addEventListener("submit", async (event) => {
       format:
         "Format: BRIEF CEPAT, 5 IDE KONTEN BERNILAI, VALUE YANG DISAMPAIKAN, FORMAT EKSEKUSI, ARAH SCRIPT. Gunakan baris baru yang rapi.",
     });
-    $("#thinkingBubble").innerHTML = text.replace(/\n/g, "<br>");
+    $("#thinkingBubble").innerHTML = renderAIText(text);
     $("#thinkingBubble").removeAttribute("id");
   } catch (error) {
     $("#thinkingBubble").textContent = friendlyAIError(error.message);

@@ -476,6 +476,47 @@ pre {
   margin-bottom: 12px;
 }
 
+.choice-text h3,
+.bubble.assistant h3 {
+  margin: 10px 0 8px;
+  color: #0f172a;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.choice-text h3:first-child,
+.bubble.assistant h3:first-child {
+  margin-top: 0;
+}
+
+.choice-text p,
+.bubble.assistant p {
+  margin: 0 0 10px;
+}
+
+.choice-text ul,
+.bubble.assistant ul {
+  margin: 0 0 10px 18px;
+  padding: 0;
+}
+
+.choice-text li,
+.bubble.assistant li {
+  margin-bottom: 6px;
+}
+
+.choice-text .numbered,
+.bubble.assistant .numbered {
+  padding-left: 2px;
+}
+
+.choice-text code,
+.bubble.assistant code {
+  background: #eef2f7;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
 .choice-actions {
   display: flex;
   gap: 8px;
