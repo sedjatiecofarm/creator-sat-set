@@ -64,6 +64,11 @@ const state = {
   lastBlueprintResult: "",
 };
 
+const emptyBlueprintHtml = `
+  <h2>Brand DNA akan muncul di sini</h2>
+  <p>Isi pertanyaan di atas untuk membentuk arah konten, gaya bicara, pilar konten, dan blueprint positioning.</p>
+`;
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const API_BASE = window.location.protocol === "file:" ? "http://localhost:8787" : "";
@@ -612,8 +617,52 @@ async function logoutGoogle() {
   }
   authState.user = null;
   renderAuthUI();
-  await loadWorkspaceState();
+  clearLocalSessionState();
+  renderWorkspaceState();
   showToast("Logout berhasil.");
+}
+
+function clearLocalSessionState() {
+  ["creatorPlans", "creatorBlueprints", "activeBlueprintId", "creatorWorkspaceId"].forEach((key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      // Ignore localStorage cleanup errors.
+    }
+  });
+
+  state.plans = {};
+  state.blueprints = [];
+  state.activeBlueprintId = null;
+  state.lastBlueprintResult = "";
+  state.scriptParts = {};
+  state.funnelParts = {};
+  state.funnelTopic = "";
+  state.selectedDate = null;
+
+  setBrandContext({});
+  $("#scriptTopic").value = "";
+  $("#videoFile").value = "";
+  $("#videoScript").value = "";
+  $("#remixTopic").value = "";
+  $("#remixResult").value = "";
+  $("#planTitle").value = "";
+  $("#planScript").value = "";
+  $("#ideaInput").value = "";
+  $("#chatBox").innerHTML =
+    '<div class="bubble assistant">Halo. Tulis saja: "Aku harus bikin konten apa?" atau masukkan keresahan audiens yang mau kamu bahas.</div>';
+  $("#blueprintResultContent").innerHTML = emptyBlueprintHtml;
+  $("#planEditor").classList.remove("active");
+}
+
+function renderWorkspaceState() {
+  $("#scriptDraft").textContent = "Belum ada script. Generate tiap bagian di atas.";
+  $("#funnelDraft").textContent = "Belum ada script.";
+  $("#funnelTopic").textContent = "Pilih salah satu ide. Setelah itu pilih Hook, Foreshadow, Isi, dan CTA.";
+  $("#scriptChoices").innerHTML = "";
+  $("#funnelChoices").innerHTML = "";
+  renderCalendar();
+  renderSavedBlueprints();
 }
 
 function showAIError(container, error) {
@@ -1208,13 +1257,7 @@ async function loadWorkspaceState() {
   state.scriptParts = {};
   state.funnelParts = {};
   state.funnelTopic = "";
-  $("#scriptDraft").textContent = "Belum ada script. Generate tiap bagian di atas.";
-  $("#funnelDraft").textContent = "Belum ada script.";
-  $("#funnelTopic").textContent = "Pilih salah satu ide. Setelah itu pilih Hook, Foreshadow, Isi, dan CTA.";
-  $("#scriptChoices").innerHTML = "";
-  $("#funnelChoices").innerHTML = "";
-  renderCalendar();
-  renderSavedBlueprints();
+  renderWorkspaceState();
   loadActiveBlueprint();
 }
 
