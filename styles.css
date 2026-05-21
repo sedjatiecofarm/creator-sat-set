@@ -48,6 +48,16 @@ textarea {
   margin-bottom: 28px;
 }
 
+.brand.home-link {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
 .brand strong {
   display: block;
   line-height: 1.05;
@@ -202,10 +212,27 @@ textarea {
 }
 
 .workspace {
+  position: relative;
   margin-left: 260px;
   padding: 34px;
   display: grid;
   place-items: start center;
+}
+
+.home-btn {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  z-index: 20;
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: #111827;
+  color: #f8fafc;
+  padding: 0 16px;
+  cursor: pointer;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 12%);
 }
 
 .view {
@@ -750,7 +777,7 @@ pre {
 
   .workspace {
     margin-left: 0;
-    padding: 18px;
+    padding: 66px 18px 18px;
   }
 
   .blueprint-grid,

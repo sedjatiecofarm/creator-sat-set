@@ -1076,6 +1076,16 @@ function generateIdeaResponse(topic) {
   return `Siap. Aku posisikan diri sebagai content director untuk "${topic}".\n\nBRIEF CEPAT:\nBrand: ${context.brandName}\nTarget: ${context.audience}\nKeresahan: ${context.painPoint}\nGaya: ${context.brandTone}\n\n5 IDE KONTEN BERNILAI:\n1. AWARENESS - Question angle\n   Ide: "Apa kesalahan yang sering terjadi saat orang menilai ${topic}?"\n   Value: memancing rasa ingin tahu dan membuat audiens sadar ada hal yang perlu dicek.\n   Format: talking head + teks pertanyaan besar.\n\n2. AWARENESS - Visual angle\n   Ide: "Tebak mana yang lebih layak: contoh A atau B?"\n   Value: audiens ikut berpikir, bukan hanya menonton pasif.\n   Format: split-screen / perbandingan visual.\n\n3. CONSIDERATION - Proof angle\n   Ide: "Bedah contoh nyata dari ${context.brandName}: mana klaim, mana bukti."\n   Value: membangun trust lewat proses dan alasan yang jelas.\n   Format: behind the scene / tour proses.\n\n4. CONSIDERATION - Checklist angle\n   Ide: "Checklist sebelum percaya klaim tentang ${topic}."\n   Value: konten bisa disimpan dan dipakai ulang.\n   Format: listicle 3-5 poin.\n\n5. CONVERSION - Decision helper\n   Ide: "Kalau kamu mau ambil keputusan soal ${topic}, mulai dari cek kebutuhanmu dulu."\n   Value: mengarahkan ke konsultasi tanpa hard selling.\n   Format: direct response + soft CTA.\n\nARAH EKSEKUSI:\nPilih satu ide yang paling kuat, buat script, sesuaikan dengan gaya kamu, lalu jadwalkan di Kalendar Konten.`;
 }
 
+function goHome() {
+  const homeNav = $('.nav-item[data-section="blueprint"]');
+  if (homeNav) homeNav.click();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+$$("[data-home]").forEach((button) => {
+  button.addEventListener("click", goHome);
+});
+
 $$(".nav-item").forEach((item) => {
   item.addEventListener("click", () => {
     $$(".nav-item").forEach((nav) => nav.classList.remove("active"));
