@@ -46,6 +46,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url === "/api/transcribe" && req.method === "POST") {
+    await handleTranscribe(req, res);
+    return;
+  }
+
   const requestUrl = new URL(req.url || "/", "http://localhost");
 
   if (requestUrl.pathname === "/api/config" && req.method === "GET") {
@@ -221,7 +226,7 @@ function readBody(req) {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 1_000_000) {
+      if (body.length > 30_000_000) {
         reject(new Error("Request terlalu besar."));
         req.destroy();
       }
@@ -239,6 +244,16 @@ async function handleGenerate(req, res) {
     sendJson(res, 200, result);
   } catch (error) {
     sendJson(res, 500, { error: error.message || "Terjadi error di server AI." });
+  }
+}
+
+async function handleTranscribe(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const text = await transcribeWithGemini(body);
+    sendJson(res, 200, { text, provider: "gemini" });
+  } catch (error) {
+    sendJson(res, 500, { error: error.message || "Terjadi error saat transkripsi." });
   }
 }
 
@@ -403,6 +418,66 @@ async function callGroq(prompt) {
     throw new Error(data.error?.message || "Gagal memanggil Groq API.");
   }
   return extractChatText(data);
+}
+
+async function transcribeWithGemini(body) {
+  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY belum diset.");
+  if (!body.dataBase64 || !body.mimeType) throw new Error("File video/audio belum valid.");
+
+  const context = body.context || {};
+  const prompt = `
+TUGAS
+Transkrip percakapan/caption dari file video atau audio ini ke Bahasa Indonesia sejelas mungkin.
+
+KONTEKS BRAND UNTUK CATATAN REMIX
+- Brand/kreator: ${context.brandName || "belum diisi"}
+- Niche/penawaran: ${context.mainOffer || "belum diisi"}
+- Target market: ${context.audience || "belum diisi"}
+- Gaya komunikasi: ${context.brandTone || "belum diisi"}
+
+ATURAN
+- Fokus ambil kata-kata yang terdengar di audio.
+- Kalau ada bagian tidak jelas, tulis [tidak jelas].
+- Jangan mengarang percakapan yang tidak terdengar.
+- Setelah transkrip, beri ringkasan pola konten agar bisa diremix.
+
+FORMAT OUTPUT
+TRANSKRIP
+...
+
+POLA KONTEN
+- Hook:
+- Alur isi:
+- CTA:
+- Catatan gaya:
+`.trim();
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: body.mimeType,
+                data: body.dataBase64,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: { temperature: 0.2 },
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || "Gagal mentranskrip file dengan Gemini.");
+  return extractGeminiText(data);
 }
 
 function systemInstruction() {

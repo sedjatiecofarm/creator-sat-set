@@ -535,6 +535,37 @@ async function askAI({ topic, instruction, format }) {
   return data.text;
 }
 
+async function transcribeMedia(file) {
+  const base64 = await fileToBase64(file);
+  const response = await fetch(`${API_BASE}/api/transcribe`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: file.name,
+      mimeType: file.type || "application/octet-stream",
+      dataBase64: base64,
+      context: getAIContext(),
+    }),
+  }).catch(() => {
+    throw new Error(IS_LOCAL_APP ? "Server AI lokal belum aktif." : "API AI cloud gagal dihubungi.");
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Transkripsi gagal. Status: ${response.status}`);
+  }
+  return data.text;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = () => reject(new Error("Gagal membaca file video/audio."));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function initAuth() {
   renderAuthUI();
   try {
@@ -1136,17 +1167,22 @@ $$("[data-generate-full]").forEach((button) => {
 });
 
 $("#transcribeVideo").addEventListener("click", async (event) => {
-  const fileName = $("#videoFile").files[0]?.name || "video konten";
+  const file = $("#videoFile").files[0];
+  if (!file) {
+    showToast("Upload video/audio dulu.");
+    return;
+  }
+
+  const maxBytes = IS_LOCAL_APP ? 18 * 1024 * 1024 : 4 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    showToast(IS_LOCAL_APP ? "File terlalu besar. Maksimal 18 MB." : "Di Vercel, pakai file maksimal 4 MB dulu.");
+    return;
+  }
+
   setLoading(event.currentTarget, true);
-  $("#videoScript").value = "AI sedang membuat struktur script referensi...";
+  $("#videoScript").value = "AI sedang mendengarkan percakapan dan mengubahnya menjadi text...";
   try {
-    $("#videoScript").value = await askAI({
-      topic: fileName,
-      instruction:
-        "Buat struktur script referensi dari nama/tema video ini. Karena file video belum dikirim ke backend sebagai audio, jelaskan struktur viral yang bisa dipakai untuk remix: hook, foreshadow, isi, CTA, pola visual, dan alasan kenapa formatnya kuat.",
-      format:
-        "Format: STRUKTUR REFERENSI, HOOK PATTERN, FORESHADOW, ISI, CTA, ARAH VISUAL, CATATAN REMIX.",
-    });
+    $("#videoScript").value = await transcribeMedia(file);
   } catch (error) {
     $("#videoScript").value = friendlyAIError(error.message);
   }
@@ -1163,11 +1199,11 @@ $("#remixScript").addEventListener("click", async (event) => {
   $("#remixResult").value = "AI sedang meremix struktur referensi menjadi script baru...";
   try {
     $("#remixResult").value = await askAI({
-      topic: `TOPIK BARU: ${topic}\n\nSTRUKTUR REFERENSI:\n${$("#videoScript").value}`,
+      topic: `TOPIK BARU: ${topic}\n\nTRANSKRIP REFERENSI:\n${$("#videoScript").value}`,
       instruction:
-        "Remix struktur video referensi menjadi script baru sesuai topik baru, brand, target market, dan keresahan audiens. Jangan plagiat. Ambil polanya, bukan kata-katanya.",
+        "Remix transkrip video referensi menjadi script baru sesuai topik baru, brand, target market, dan keresahan audiens. Jangan plagiat. Ambil pola komunikasi, ritme, hook, dan alur persuasi, bukan kata-kata mentahnya.",
       format:
-        "Format script final: HOOK, FORESHADOW, ISI, CTA, ARAH VISUAL. Buat siap dipakai untuk video pendek.",
+        "Format script final: HOOK, FORESHADOW, ISI, CTA, ARAH VISUAL, CATATAN ADAPTASI. Buat siap dipakai untuk video pendek.",
     });
   } catch (error) {
     $("#remixResult").value = friendlyAIError(error.message);

@@ -11,6 +11,7 @@ api/_shared.js
 api/config.js
 api/generate.js
 api/db.js
+api/transcribe.js
 vercel.json
 ```
 
