@@ -75,6 +75,8 @@ const authState = {
   ready: false,
 };
 
+showAuthRedirectError();
+
 function getWorkspaceId() {
   const param = new URLSearchParams(window.location.search).get("workspace");
   if (param) {
@@ -100,6 +102,17 @@ function cleanWorkspaceId(value) {
 
 function getActiveWorkspaceId() {
   return authState.user?.id ? `user-${authState.user.id}` : WORKSPACE_ID;
+}
+
+function showAuthRedirectError() {
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get("error_description") || params.get("error");
+  if (!error) return;
+
+  window.history.replaceState({}, document.title, window.location.pathname);
+  window.addEventListener("load", () => {
+    showToast(`Login Google gagal: ${decodeURIComponent(error).slice(0, 140)}`);
+  });
 }
 
 const monthNames = [
@@ -1168,12 +1181,13 @@ $("#exportCsv").addEventListener("click", exportCalendarCsv);
 $("#exportJson").addEventListener("click", exportCalendarJson);
 
 async function loadWorkspaceState() {
+  const isLoggedIn = Boolean(authState.user);
   const localPlans = storage.read("creatorPlans", "{}");
   const localBlueprints = storage.read("creatorBlueprints", "[]");
   const localActiveBlueprintId = storage.read("activeBlueprintId", "null");
-  state.plans = localPlans;
-  state.blueprints = localBlueprints;
-  state.activeBlueprintId = localActiveBlueprintId;
+  state.plans = isLoggedIn ? {} : localPlans;
+  state.blueprints = isLoggedIn ? [] : localBlueprints;
+  state.activeBlueprintId = isLoggedIn ? null : localActiveBlueprintId;
   state.lastBlueprintResult = "";
 
   const data = await db.load();
@@ -1184,7 +1198,7 @@ async function loadWorkspaceState() {
       state.plans = data.plans || {};
       state.blueprints = data.blueprints || [];
       state.activeBlueprintId = data.activeBlueprintId || null;
-    } else if (Object.keys(localPlans).length || localBlueprints.length) {
+    } else if (!isLoggedIn && (Object.keys(localPlans).length || localBlueprints.length)) {
       state.plans = localPlans;
       state.blueprints = localBlueprints;
       db.saveNow();
