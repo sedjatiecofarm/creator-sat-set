@@ -48,6 +48,14 @@ const server = http.createServer(async (req, res) => {
 
   const requestUrl = new URL(req.url || "/", "http://localhost");
 
+  if (requestUrl.pathname === "/api/config" && req.method === "GET") {
+    sendJson(res, 200, {
+      supabaseUrl,
+      supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "",
+    });
+    return;
+  }
+
   if (requestUrl.pathname === "/api/db" && req.method === "GET") {
     sendJson(res, 200, await readDb(requestUrl.searchParams.get("workspaceId")));
     return;

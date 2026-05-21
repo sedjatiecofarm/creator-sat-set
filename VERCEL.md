@@ -8,6 +8,7 @@ Upload perubahan ini ke repo GitHub:
 
 ```text
 api/_shared.js
+api/config.js
 api/generate.js
 api/db.js
 vercel.json
@@ -53,6 +54,7 @@ OPENROUTER_API_KEY=...
 GROQ_API_KEY=...
 GROQ_MODEL=llama-3.3-70b-versatile
 SUPABASE_URL=...
+SUPABASE_PUBLISHABLE_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 SUPABASE_TABLE=creator_app_state
 SUPABASE_STATE_ID=creator-sat-set
@@ -61,4 +63,3 @@ SUPABASE_STATE_ID=creator-sat-set
 ## 4. Deploy
 
 Klik Deploy. Setelah selesai, buka URL Vercel dari tablet.
-

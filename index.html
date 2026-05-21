@@ -26,9 +26,13 @@
       <div class="account">
         <div class="avatar ny-mark"><i>Y</i><i>N</i></div>
         <div>
-          <strong>Digital Creative</strong>
-          <span>creator workspace</span>
+          <strong id="accountName">Digital Creative</strong>
+          <span id="accountEmail">Belum login</span>
         </div>
+      </div>
+      <div class="auth-actions">
+        <button class="auth-btn" id="loginGoogle" type="button">Login Google</button>
+        <button class="auth-btn muted-btn" id="logoutGoogle" type="button" hidden>Logout</button>
       </div>
     </aside>
 
@@ -195,6 +199,7 @@
     </main>
 
     <div class="toast" id="toast"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>

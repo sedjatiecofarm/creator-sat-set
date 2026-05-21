@@ -20,7 +20,7 @@ const db = {
   saveTimer: null,
   async load() {
     try {
-      const response = await fetch(`${API_BASE}/api/db?workspaceId=${encodeURIComponent(WORKSPACE_ID)}`);
+      const response = await fetch(`${API_BASE}/api/db?workspaceId=${encodeURIComponent(getActiveWorkspaceId())}`);
       if (!response.ok) throw new Error("DB backend tidak tersedia.");
       const data = await response.json();
       this.ready = true;
@@ -36,7 +36,7 @@ const db = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        workspaceId: WORKSPACE_ID,
+        workspaceId: getActiveWorkspaceId(),
         plans: state.plans,
         blueprints: state.blueprints,
         activeBlueprintId: state.activeBlueprintId,
@@ -69,6 +69,11 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const API_BASE = window.location.protocol === "file:" ? "http://localhost:8787" : "";
 const IS_LOCAL_APP = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
 const WORKSPACE_ID = getWorkspaceId();
+const authState = {
+  client: null,
+  user: null,
+  ready: false,
+};
 
 function getWorkspaceId() {
   const param = new URLSearchParams(window.location.search).get("workspace");
@@ -91,6 +96,10 @@ function cleanWorkspaceId(value) {
     .replace(/^"+|"+$/g, "")
     .replace(/[^a-zA-Z0-9_-]/g, "")
     .slice(0, 80);
+}
+
+function getActiveWorkspaceId() {
+  return authState.user?.id ? `user-${authState.user.id}` : WORKSPACE_ID;
 }
 
 const monthNames = [
@@ -508,6 +517,92 @@ async function askAI({ topic, instruction, format }) {
   return data.text;
 }
 
+async function initAuth() {
+  renderAuthUI();
+  try {
+    const response = await fetch(`${API_BASE}/api/config`);
+    if (!response.ok) throw new Error("Config auth tidak tersedia.");
+    const config = await response.json();
+    if (!config.supabaseUrl || !config.supabasePublishableKey || !window.supabase?.createClient) {
+      authState.ready = false;
+      renderAuthUI();
+      return;
+    }
+
+    authState.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey);
+    const { data } = await authState.client.auth.getSession();
+    authState.user = data.session?.user || null;
+    authState.ready = true;
+
+    authState.client.auth.onAuthStateChange(async (event, session) => {
+      const previousUserId = authState.user?.id || null;
+      authState.user = session?.user || null;
+      renderAuthUI();
+      const nextUserId = authState.user?.id || null;
+      if (event !== "INITIAL_SESSION" && previousUserId !== nextUserId) {
+        await loadWorkspaceState();
+      }
+    });
+  } catch (error) {
+    authState.ready = false;
+    renderAuthUI();
+  }
+}
+
+function renderAuthUI() {
+  const loginButton = $("#loginGoogle");
+  const logoutButton = $("#logoutGoogle");
+  const accountName = $("#accountName");
+  const accountEmail = $("#accountEmail");
+  if (!loginButton || !logoutButton || !accountName || !accountEmail) return;
+
+  if (!authState.ready) {
+    loginButton.hidden = false;
+    loginButton.disabled = true;
+    loginButton.textContent = "Login belum aktif";
+    logoutButton.hidden = true;
+    accountName.textContent = "Digital Creative";
+    accountEmail.textContent = "Mode device lokal";
+    return;
+  }
+
+  const user = authState.user;
+  loginButton.hidden = Boolean(user);
+  loginButton.disabled = false;
+  loginButton.textContent = "Login Google";
+  logoutButton.hidden = !user;
+  accountName.textContent = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Digital Creative";
+  accountEmail.textContent = user?.email || "Data tersimpan di device ini";
+}
+
+async function loginWithGoogle() {
+  if (!authState.client) {
+    showToast("Login Google belum aktif. Tambahkan SUPABASE_PUBLISHABLE_KEY dulu.");
+    return;
+  }
+
+  const { error } = await authState.client.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin + window.location.pathname,
+    },
+  });
+  if (error) showToast(error.message);
+}
+
+async function logoutGoogle() {
+  if (!authState.client) return;
+  const { error } = await authState.client.auth.signOut();
+  if (error) {
+    showToast(error.message);
+    return;
+  }
+  authState.user = null;
+  renderAuthUI();
+  await loadWorkspaceState();
+  showToast("Logout berhasil.");
+}
+
 function showAIError(container, error) {
   const wrap = $(container);
   const message = friendlyAIError(error.message);
@@ -897,6 +992,9 @@ $$(".nav-item").forEach((item) => {
   });
 });
 
+$("#loginGoogle").addEventListener("click", loginWithGoogle);
+$("#logoutGoogle").addEventListener("click", logoutGoogle);
+
 $("#blueprintSample").addEventListener("click", () => {
   state.activeBlueprintId = null;
   $("#brandName").value = "Sedjati Eco Farm";
@@ -1069,11 +1167,17 @@ $("#savePlan").addEventListener("click", () => {
 $("#exportCsv").addEventListener("click", exportCalendarCsv);
 $("#exportJson").addEventListener("click", exportCalendarJson);
 
-async function initApp() {
+async function loadWorkspaceState() {
+  const localPlans = storage.read("creatorPlans", "{}");
+  const localBlueprints = storage.read("creatorBlueprints", "[]");
+  const localActiveBlueprintId = storage.read("activeBlueprintId", "null");
+  state.plans = localPlans;
+  state.blueprints = localBlueprints;
+  state.activeBlueprintId = localActiveBlueprintId;
+  state.lastBlueprintResult = "";
+
   const data = await db.load();
   if (data) {
-    const localPlans = state.plans;
-    const localBlueprints = state.blueprints;
     const backendHasData = Object.keys(data.plans || {}).length || (data.blueprints || []).length;
 
     if (backendHasData) {
@@ -1087,10 +1191,23 @@ async function initApp() {
     }
   }
 
-  renderFunnelIdeas("tofu");
+  state.scriptParts = {};
+  state.funnelParts = {};
+  state.funnelTopic = "";
+  $("#scriptDraft").textContent = "Belum ada script. Generate tiap bagian di atas.";
+  $("#funnelDraft").textContent = "Belum ada script.";
+  $("#funnelTopic").textContent = "Pilih salah satu ide. Setelah itu pilih Hook, Foreshadow, Isi, dan CTA.";
+  $("#scriptChoices").innerHTML = "";
+  $("#funnelChoices").innerHTML = "";
   renderCalendar();
   renderSavedBlueprints();
   loadActiveBlueprint();
+}
+
+async function initApp() {
+  await initAuth();
+  renderFunnelIdeas("tofu");
+  await loadWorkspaceState();
 }
 
 function loadActiveBlueprint() {
