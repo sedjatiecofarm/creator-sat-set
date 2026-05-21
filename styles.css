@@ -24,6 +24,10 @@ body {
   letter-spacing: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 button,
 input,
 textarea {
@@ -217,6 +221,7 @@ textarea {
   padding: 34px;
   display: grid;
   place-items: start center;
+  min-width: 0;
 }
 
 .home-btn {
@@ -238,6 +243,7 @@ textarea {
 .view {
   display: none;
   width: min(100%, 980px);
+  min-width: 0;
 }
 
 .view.active {
@@ -246,6 +252,7 @@ textarea {
 
 .panel {
   width: 100%;
+  min-width: 0;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -261,6 +268,11 @@ textarea {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.section-head > *,
+.calendar-head > * {
+  min-width: 0;
 }
 
 .section-head.slim {
@@ -319,6 +331,7 @@ textarea,
   color: var(--ink);
   padding: 13px 14px;
   outline: 0;
+  min-width: 0;
 }
 
 textarea {
@@ -457,6 +470,7 @@ textarea:focus,
 
 pre {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   margin: 0;
   line-height: 1.55;
   font-family: inherit;
@@ -495,6 +509,7 @@ pre {
   white-space: pre-wrap;
   display: block;
   width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .choice.selected {
@@ -593,6 +608,7 @@ pre {
   border-radius: 8px;
   padding: 14px 16px;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .bubble.assistant {
@@ -699,6 +715,7 @@ pre {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
+  min-width: 0;
 }
 
 .day-name {
@@ -793,5 +810,269 @@ pre {
 
   .bubble {
     max-width: 100%;
+  }
+}
+
+@media (max-width: 1120px) {
+  .sidebar {
+    width: 230px;
+    padding: 20px 14px;
+  }
+
+  .workspace {
+    margin-left: 230px;
+    padding: 28px 22px;
+  }
+
+  .view {
+    width: min(100%, 900px);
+  }
+
+  .panel {
+    padding: 24px;
+  }
+
+  .action-row {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .action-row .primary-btn,
+  .action-row .soft-btn {
+    padding: 0 10px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 920px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    width: 100%;
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .brand {
+    margin-bottom: 12px;
+  }
+
+  .brand strong {
+    font-size: 18px;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .nav-item {
+    min-height: 42px;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+
+  .menu-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+
+  .account {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .auth-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .auth-btn[hidden] {
+    display: none;
+  }
+
+  .workspace {
+    margin-left: 0;
+    padding: 72px 18px 18px;
+  }
+
+  .home-btn {
+    top: 12px;
+    right: 14px;
+    min-height: 34px;
+    padding: 0 12px;
+  }
+
+  .blueprint-grid,
+  .action-row,
+  .funnel-tabs,
+  .saved-profile {
+    grid-template-columns: 1fr;
+  }
+
+  .section-head,
+  .calendar-head {
+    display: grid;
+  }
+
+  .section-head .ghost-btn,
+  .calendar-head .ghost-btn {
+    width: fit-content;
+  }
+
+  .chat-box {
+    height: 460px;
+  }
+
+  .bubble {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  body {
+    background: #fff;
+  }
+
+  .sidebar {
+    padding: 12px;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brand strong {
+    font-size: 17px;
+  }
+
+  .nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nav-item {
+    border-radius: 8px;
+    font-size: 13px;
+    gap: 7px;
+  }
+
+  .nav-item[data-section="funnel"],
+  .nav-item[data-section="plan"] {
+    grid-column: span 2;
+  }
+
+  .account {
+    align-items: flex-start;
+  }
+
+  .account > div:last-child {
+    min-width: 0;
+  }
+
+  .account strong,
+  .account span {
+    overflow-wrap: anywhere;
+  }
+
+  .auth-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace {
+    padding: 64px 10px 14px;
+  }
+
+  .home-btn {
+    top: 10px;
+    right: 10px;
+  }
+
+  .panel {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    padding: 18px 14px;
+    box-shadow: none;
+  }
+
+  h1 {
+    font-size: 26px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  textarea {
+    min-height: 112px;
+  }
+
+  .wide-input textarea {
+    min-height: 120px;
+  }
+
+  .large-textarea {
+    min-height: 170px;
+  }
+
+  .primary-btn,
+  .soft-btn,
+  .ghost-btn,
+  .icon-btn {
+    width: 100%;
+  }
+
+  .chat-form {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-box {
+    height: 420px;
+    padding: 12px;
+  }
+
+  .bubble {
+    padding: 12px;
+  }
+
+  .choice-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .copy-btn {
+    position: static;
+    display: block;
+    margin-left: auto;
+    margin-bottom: 10px;
+  }
+
+  .calendar-head > div {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .calendar {
+    gap: 5px;
+  }
+
+  .day-name {
+    font-size: 10px;
+  }
+
+  .day {
+    min-height: 64px;
+    padding: 6px;
+    font-size: 12px;
+  }
+
+  .day small {
+    font-size: 10px;
+    -webkit-line-clamp: 1;
   }
 }
