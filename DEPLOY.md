@@ -17,11 +17,15 @@ Gunakan `service_role` hanya di server Render, jangan pernah ditaruh di frontend
 
 1. Push folder project ini ke GitHub.
 2. Di Render, buat Web Service dari repo GitHub tersebut.
-3. Start command:
+3. Build command:
+   ```text
+   npm install && npm run build
+   ```
+4. Start command:
    ```text
    node server.js
    ```
-4. Tambahkan environment variables:
+5. Tambahkan environment variables:
    ```text
    AI_PROVIDER=gemini
    AI_PROVIDER_ORDER=gemini,openrouter,groq
@@ -35,7 +39,7 @@ Gunakan `service_role` hanya di server Render, jangan pernah ditaruh di frontend
    SUPABASE_TABLE=creator_app_state
    SUPABASE_STATE_ID=creator-sat-set
    ```
-5. Deploy.
-6. Buka URL Render dari tablet.
+6. Deploy.
+7. Buka URL Render dari tablet.
 
 Jika Supabase env belum diisi, aplikasi tetap jalan tapi data tersimpan lokal di server Render. Untuk data permanen, Supabase env wajib diisi.

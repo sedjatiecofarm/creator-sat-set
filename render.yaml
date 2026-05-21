@@ -3,7 +3,7 @@ services:
     name: creator-sat-set
     env: node
     plan: free
-    buildCommand: ""
+    buildCommand: npm install && npm run build
     startCommand: node server.js
     envVars:
       - key: PORT
@@ -20,4 +20,3 @@ services:
         value: creator_app_state
       - key: SUPABASE_STATE_ID
         value: creator-sat-set
-

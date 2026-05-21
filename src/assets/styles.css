@@ -1,0 +1,727 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 h-screen overflow-hidden bg-[#cfeee5] text-[#20312c] font-sans tracking-normal;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  h1,
+  h2,
+  p {
+    @apply m-0;
+  }
+
+  h1 {
+    @apply text-[30px] leading-[1.08] font-black text-[#20312c];
+  }
+
+  h2 {
+    @apply text-lg leading-tight font-black text-[#20312c];
+  }
+}
+
+@layer components {
+  #app {
+    @apply h-screen overflow-hidden p-8;
+  }
+
+  .app-shell {
+    @apply mx-auto grid h-full w-full max-w-[1800px] grid-cols-[250px_minmax(0,1fr)] overflow-hidden rounded-[30px] bg-[#f2f4f3] shadow-[0_24px_38px_rgb(32_49_44_/_0.22)];
+  }
+
+  .sidebar {
+    @apply relative inset-auto z-20 flex h-full min-h-0 w-full flex-col overflow-hidden rounded-none bg-[#2f8d73] px-6 py-9 text-white shadow-none;
+  }
+
+  .brand {
+    @apply mb-14 flex items-center gap-3;
+  }
+
+  .brand.home-link {
+    @apply w-full cursor-pointer border-0 bg-transparent p-0 text-left text-inherit;
+  }
+
+  .brand strong {
+    @apply block text-base font-black leading-tight;
+  }
+
+  .brand-mark,
+  .avatar {
+    @apply relative block shrink-0 rounded-xl bg-white/15 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.16)];
+  }
+
+  .brand-mark {
+    @apply h-10 w-10;
+  }
+
+  .ny-mark i {
+    @apply absolute font-serif not-italic font-black leading-none text-white;
+  }
+
+  .ny-mark i:first-child {
+    @apply left-2 top-2 text-[22px];
+    transform: scaleX(0.9);
+  }
+
+  .ny-mark i:last-child {
+    @apply left-[17px] top-[9px] text-[21px];
+    transform: scaleX(0.82);
+  }
+
+  .nav {
+    @apply grid gap-4;
+  }
+
+  .nav-item {
+    @apply flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-full border border-transparent bg-transparent px-2 text-left font-black text-[#d9f0e9] transition hover:bg-white/10 hover:text-white;
+  }
+
+  .nav-item.active {
+    @apply border-white/20 bg-white/15 text-white;
+  }
+
+  .menu-icon {
+    @apply grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-sm leading-none text-white;
+  }
+
+  .nav-item.active .menu-icon {
+    @apply bg-white text-[#2f8d73];
+  }
+
+  .account {
+    @apply mt-auto flex min-w-0 items-center gap-3 border-t border-white/15 pt-5;
+  }
+
+  .avatar {
+    @apply h-9 w-9;
+  }
+
+  .avatar.ny-mark i:first-child {
+    @apply left-[7px] top-2 text-[21px];
+  }
+
+  .avatar.ny-mark i:last-child {
+    @apply left-[15px] top-[9px] text-xl;
+  }
+
+  .account > div:last-child {
+    @apply min-w-0;
+  }
+
+  .account strong,
+  .account span {
+    @apply block break-words;
+  }
+
+  .account strong {
+    @apply text-[13px] font-black leading-tight text-white;
+  }
+
+  .account span {
+    @apply mt-0.5 text-xs text-[#c7e4da];
+  }
+
+  .auth-actions {
+    @apply mt-3 grid gap-2;
+  }
+
+  .auth-btn {
+    @apply min-h-10 w-full cursor-pointer rounded-full border border-white/20 bg-white px-4 font-black text-[#2f8d73] transition hover:bg-[#e9fff6];
+  }
+
+  .auth-btn.muted-btn {
+    @apply bg-white/15 text-white hover:bg-white/20;
+  }
+
+  .workspace {
+    @apply m-0 grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] justify-items-center overflow-hidden bg-[#f2f4f3] px-10 py-9 shadow-none;
+  }
+
+  .workspace-topbar {
+    @apply mb-6 flex min-h-12 w-full max-w-[1220px] items-center justify-between gap-5;
+  }
+
+  .topbar-search {
+    @apply flex min-h-11 w-full max-w-[340px] items-center gap-2.5 rounded-full bg-white px-5 font-bold shadow-[0_8px_18px_rgb(32_49_44_/_0.05)];
+  }
+
+  .topbar-search input {
+    @apply min-w-0 flex-1 border-0 bg-transparent text-sm font-bold text-[#20312c] outline-none placeholder:text-[#94a29d];
+  }
+
+  .topbar-search span {
+    @apply text-lg font-black text-[#20312c];
+  }
+
+  .topbar-actions {
+    @apply flex flex-wrap items-center justify-end gap-3;
+  }
+
+  .status-pill {
+    @apply inline-flex min-h-11 items-center rounded-full bg-[#2f8d73] px-4 text-sm font-black text-white;
+  }
+
+  .icon-action {
+    @apply min-h-11 w-11 cursor-pointer rounded-full border-0 bg-[#2f8d73] font-black text-white;
+  }
+
+  .profile-chip {
+    @apply min-h-11 w-12 cursor-pointer rounded-full border-0 bg-[#e9fff6] font-black text-[#2f8d73];
+  }
+
+  .view {
+    @apply hidden h-full w-full max-w-[1220px] min-w-0 overflow-auto pr-2;
+  }
+
+  .view.active {
+    @apply block;
+  }
+
+  #funnel.view.active,
+  #plan.view.active {
+    @apply grid items-start gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(430px,0.92fr)];
+  }
+
+  #plan.view.active {
+    @apply xl:grid-cols-[minmax(0,1.42fr)_minmax(340px,0.58fr)];
+  }
+
+  .panel {
+    @apply mb-6 w-full min-w-0 rounded-[22px] border-0 bg-white p-7 shadow-[0_8px_18px_rgb(32_49_44_/_0.05)];
+  }
+
+  .section-head,
+  .calendar-head {
+    @apply mb-6 flex items-start justify-between gap-5;
+  }
+
+  .section-head > *,
+  .calendar-head > * {
+    @apply min-w-0;
+  }
+
+  .section-head.slim {
+    @apply mb-4 items-center;
+  }
+
+  .eyebrow {
+    @apply mb-1.5 text-[11px] font-black uppercase text-[#2f8d73];
+  }
+
+  .muted {
+    @apply text-sm leading-relaxed text-[#73827d];
+  }
+
+  .blueprint-grid {
+    @apply grid grid-cols-1 gap-x-5 gap-y-4 lg:grid-cols-2;
+  }
+
+  label {
+    @apply grid gap-2 text-[13px] font-black text-[#20312c];
+  }
+
+  textarea,
+  .text-input,
+  .file-input,
+  #ideaInput,
+  .chat-form input {
+    @apply w-full min-w-0 rounded-2xl border border-[#e1e8e5] bg-[#f8faf9] px-4 py-3 text-[#20312c] outline-none transition focus:border-[#2f8d73] focus:bg-white focus:ring-4 focus:ring-[#2f8d73]/10;
+  }
+
+  textarea {
+    @apply min-h-[106px] resize-y leading-relaxed;
+  }
+
+  .wide-input {
+    @apply mb-5;
+  }
+
+  .wide-input textarea {
+    @apply min-h-32;
+  }
+
+  .large-textarea {
+    @apply my-3 min-h-48;
+  }
+
+  .primary-btn,
+  .soft-btn,
+  .ghost-btn,
+  .month-btn,
+  .tiny-btn,
+  .choice-action {
+    @apply min-h-11 cursor-pointer rounded-full border px-5 font-black whitespace-nowrap transition;
+  }
+
+  .primary-btn,
+  .choice-action.primary {
+    @apply border-[#2f8d73] bg-[#2f8d73] text-white hover:bg-[#24745f];
+  }
+
+  .soft-btn,
+  .ghost-btn,
+  .month-btn,
+  .tiny-btn,
+  .choice-action {
+    @apply border-[#dce5e1] bg-[#edf3f0] text-[#20312c] hover:bg-[#e2ebe7];
+  }
+
+  .result-card,
+  .draft-card,
+  .saved-blueprints {
+    @apply rounded-[20px];
+  }
+
+  .result-card {
+    @apply relative mt-6 border border-[#cfe7df] bg-[#f7fffb] p-6 text-[#244135];
+  }
+
+  .result-card h2,
+  .result-card h3 {
+    @apply text-[#20312c];
+  }
+
+  .saved-blueprints {
+    @apply mt-6 bg-[#f7faf9] p-5;
+  }
+
+  .saved-list {
+    @apply grid gap-3;
+  }
+
+  .saved-profile {
+    @apply grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-2xl border border-[#e1e8e5] bg-white p-3;
+  }
+
+  .saved-profile.active {
+    @apply border-[#2f8d73] shadow-[inset_0_0_0_1px_#2f8d73];
+  }
+
+  .saved-profile strong,
+  .saved-profile span {
+    @apply block break-words;
+  }
+
+  .saved-profile span {
+    @apply mt-1 text-xs text-[#73827d];
+  }
+
+  .tiny-btn {
+    @apply min-h-9 text-[13px];
+  }
+
+  .tiny-btn.danger {
+    @apply border-[#f1c6c2] bg-[#fff0ef] text-[#9b2f28] hover:bg-[#ffe7e5];
+  }
+
+  .draft-card {
+    @apply relative mt-6 border border-white/10 bg-[#244135] p-7 text-[#eafff7];
+  }
+
+  .draft-card h2 {
+    @apply mb-4 text-[#eafff7];
+  }
+
+  pre {
+    @apply m-0 whitespace-pre-wrap break-words font-sans leading-relaxed;
+  }
+
+  .copy-btn {
+    @apply absolute right-4 top-4 min-h-8 cursor-pointer rounded-full border border-transparent bg-white/70 px-3 font-black text-[#2f8d73];
+  }
+
+  .draft-card .copy-btn {
+    @apply bg-white/10 text-[#eafff7];
+  }
+
+  .action-row {
+    @apply my-5 grid grid-cols-1 gap-3 lg:grid-cols-[1.25fr_repeat(4,minmax(0,1fr))];
+  }
+
+  .compact-builder .action-row {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .compact-builder .primary-btn {
+    @apply min-w-[132px] flex-[1_1_132px];
+  }
+
+  .compact-builder .soft-btn {
+    @apply min-w-[116px] flex-[1_1_116px] px-4 text-sm;
+  }
+
+  .compact-builder .draft-card {
+    @apply mt-7;
+  }
+
+  .choice-grid {
+    @apply grid gap-3;
+  }
+
+  .choice {
+    @apply block w-full whitespace-pre-wrap break-words rounded-2xl border border-[#cfe7df] bg-[#f7fffb] p-4 leading-relaxed text-[#244135];
+  }
+
+  .choice.selected {
+    @apply border-[#2f8d73] bg-[#e7f7f1] shadow-[inset_0_0_0_1px_#2f8d73];
+  }
+
+  .choice-text {
+    @apply mb-3;
+  }
+
+  .choice-text h3,
+  .bubble.assistant h3 {
+    @apply mb-2 mt-3 text-base font-black leading-tight text-[#20312c];
+  }
+
+  .choice-text h3:first-child,
+  .bubble.assistant h3:first-child {
+    @apply mt-0;
+  }
+
+  .choice-text p,
+  .bubble.assistant p {
+    @apply mb-2.5;
+  }
+
+  .choice-text ul,
+  .bubble.assistant ul {
+    @apply mb-2.5 ml-5 list-disc p-0;
+  }
+
+  .choice-text li,
+  .bubble.assistant li {
+    @apply mb-1.5;
+  }
+
+  .choice-text code,
+  .bubble.assistant code {
+    @apply rounded bg-[#e9f0ed] px-1.5 py-0.5;
+  }
+
+  .choice-actions {
+    @apply flex justify-end gap-2;
+  }
+
+  .choice-action {
+    @apply min-h-9 px-3;
+  }
+
+  .copy-inline {
+    @apply mb-3 mt-0 w-max;
+  }
+
+  .chat-box {
+    @apply flex h-[min(58vh,620px)] min-h-[430px] flex-col gap-3 overflow-auto rounded-[20px] border border-[#e1e8e5] bg-[#f8faf9] p-5;
+  }
+
+  .bubble {
+    @apply max-w-[78%] break-words rounded-[20px] px-4 py-3.5 leading-relaxed;
+  }
+
+  .bubble.assistant {
+    @apply border border-[#e1e8e5] bg-white text-[#20312c];
+  }
+
+  .bubble.user {
+    @apply self-end bg-[#2f8d73] text-white;
+  }
+
+  .chat-form {
+    @apply mt-3.5 grid grid-cols-[minmax(0,1fr)_auto] gap-2.5;
+  }
+
+  .funnel-tabs {
+    @apply mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3;
+  }
+
+  .funnel-tabs button {
+    @apply min-h-[76px] cursor-pointer rounded-[20px] border border-[#e1e8e5] bg-[#f8faf9] p-3 text-left text-[#20312c];
+  }
+
+  .funnel-tabs button.active {
+    @apply border-[#9bd3c0] bg-[#eefbf6] shadow-[inset_0_0_0_1px_#9bd3c0];
+  }
+
+  .funnel-tabs strong,
+  .funnel-tabs span {
+    @apply block;
+  }
+
+  .funnel-tabs span {
+    @apply mt-1 text-xs text-[#73827d];
+  }
+
+  .idea-list {
+    @apply grid gap-4;
+  }
+
+  .funnel-note {
+    @apply rounded-2xl border border-[#cfe7df] bg-[#f7fffb] px-4 py-3 font-black leading-relaxed text-[#244135];
+  }
+
+  .idea-card {
+    @apply cursor-pointer whitespace-pre-wrap rounded-2xl border border-[#e1e8e5] bg-white p-4 text-left leading-relaxed text-[#20312c];
+  }
+
+  .idea-card.selected {
+    @apply border-[#2f8d73] shadow-[inset_0_0_0_1px_#2f8d73];
+  }
+
+  .ai-loading,
+  .ai-error {
+    @apply rounded-2xl px-4 py-3 font-black leading-relaxed;
+  }
+
+  .ai-loading {
+    @apply border border-[#cfe7df] bg-[#eefbf6] text-[#236852];
+  }
+
+  .ai-error {
+    @apply border border-[#f1c6c2] bg-[#fff0ef] text-[#9b2f28];
+  }
+
+  .calendar-head {
+    @apply sticky top-0 z-10 -mx-2 mb-5 items-center rounded-2xl bg-white/95 px-2 pb-4 backdrop-blur;
+  }
+
+  .calendar-head > div {
+    @apply min-w-0;
+  }
+
+  .calendar-head > div:first-child {
+    @apply block;
+  }
+
+  .calendar-actions {
+    @apply flex flex-wrap items-center justify-end gap-3;
+  }
+
+  .month-switcher {
+    @apply inline-flex min-h-11 items-center gap-2 rounded-full border border-[#dce5e1] bg-[#edf3f0] px-2;
+  }
+
+  .month-switcher strong {
+    @apply min-w-[120px] text-center text-sm font-black text-[#20312c];
+  }
+
+  .export-actions {
+    @apply flex items-center gap-2;
+  }
+
+  .export-actions .ghost-btn {
+    @apply min-h-11 px-4 text-sm;
+  }
+
+  .month-switcher .month-btn {
+    @apply min-h-8 w-8 border-0 bg-white p-0 text-xl leading-none text-[#2f8d73] shadow-sm hover:bg-[#f7fffb];
+  }
+
+  .calendar {
+    @apply grid min-w-0 grid-cols-7 gap-3;
+  }
+
+  .day-name {
+    @apply mb-1 text-center text-xs font-black uppercase text-[#73827d];
+  }
+
+  .day {
+    @apply min-h-[92px] cursor-pointer rounded-2xl border border-[#e1e8e5] bg-white p-3 text-left text-[#20312c] transition hover:border-[#9bd3c0] hover:bg-[#f7fffb];
+  }
+
+  .day.today {
+    @apply border-[#2f8d73] bg-[#e8f7f2];
+  }
+
+  .day.has-plan {
+    @apply border-[#8fd2b8] bg-[#f2fbf7];
+  }
+
+  .day span {
+    @apply mb-2 flex h-7 w-7 items-center justify-center rounded-full font-black;
+  }
+
+  .day.today span {
+    @apply bg-[#2f8d73] text-white;
+  }
+
+  .day small {
+    @apply line-clamp-2 text-[#2f8d73];
+  }
+
+  .plan-editor {
+    @apply hidden;
+  }
+
+  .plan-editor.active {
+    @apply grid gap-4;
+  }
+
+  #plan .plan-editor {
+    @apply sticky top-0;
+  }
+
+  .toast {
+    @apply pointer-events-none fixed bottom-5 right-5 z-50 translate-y-2.5 rounded-2xl bg-[#244135] px-4 py-3 text-white opacity-0 shadow-lg transition;
+  }
+
+  .toast.show {
+    @apply translate-y-0 opacity-100;
+  }
+}
+
+@layer utilities {
+  @media (max-width: 920px) {
+    #app {
+      @apply h-screen overflow-hidden p-0;
+    }
+
+    .app-shell {
+      @apply h-screen grid-cols-1 grid-rows-[auto_minmax(0,1fr)] rounded-none shadow-none;
+    }
+
+    .sidebar {
+      @apply static h-auto w-full rounded-none p-3 shadow-none;
+    }
+
+    .brand {
+      @apply mb-3;
+    }
+
+    .nav {
+      @apply grid-cols-2 gap-2;
+    }
+
+    .nav-item {
+      @apply min-h-10 text-sm;
+    }
+
+    .account {
+      @apply mt-3 pt-3;
+    }
+
+    .auth-actions {
+      @apply grid-cols-1;
+    }
+
+    .workspace {
+      @apply m-0 h-full min-h-0 rounded-none p-3 shadow-none;
+    }
+
+    .workspace-topbar,
+    .section-head,
+    .calendar-head {
+      @apply grid;
+    }
+
+    .topbar-actions,
+    .calendar-head > div {
+      @apply justify-start;
+    }
+
+    .calendar-actions {
+      @apply justify-start;
+    }
+
+    .month-switcher {
+      @apply w-full justify-between;
+    }
+
+    .export-actions {
+      @apply w-full;
+    }
+
+    .export-actions .ghost-btn {
+      @apply flex-1;
+    }
+
+    .topbar-search {
+      @apply max-w-none;
+    }
+
+    .saved-profile {
+      @apply grid-cols-1;
+    }
+
+    .bubble {
+      @apply max-w-full;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .panel {
+      @apply rounded-none px-3.5 py-4;
+    }
+
+    h1 {
+      @apply text-[26px];
+    }
+
+    .primary-btn,
+    .soft-btn,
+    .ghost-btn,
+    .month-btn {
+      @apply w-full;
+    }
+
+    .chat-form,
+    .choice-actions {
+      @apply grid grid-cols-1;
+    }
+
+    .chat-box {
+      @apply h-[50vh] min-h-[390px] p-3;
+    }
+
+    .copy-btn {
+      @apply static mb-2.5 ml-auto block w-max;
+    }
+
+    .calendar {
+      @apply gap-1.5;
+    }
+
+    .day-name {
+      @apply text-[10px];
+    }
+
+    .day {
+      @apply min-h-[70px] p-1.5 text-xs;
+    }
+
+    .day span {
+      @apply h-6 w-6;
+    }
+
+    .day small {
+      @apply line-clamp-1 text-[10px];
+    }
+  }
+}

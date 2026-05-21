@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const root = __dirname;
+const publicRoot = fs.existsSync(path.join(root, "dist")) ? path.join(root, "dist") : root;
 const dataDir = path.join(root, "data");
 const dbPath = path.join(dataDir, "creator-db.json");
 loadEnvFile();
@@ -538,9 +539,9 @@ function extractChatText(data) {
 function serveStatic(req, res) {
   const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
   const safePath = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
-  const filePath = path.normalize(path.join(root, safePath));
+  const filePath = path.normalize(path.join(publicRoot, safePath));
 
-  if (!filePath.startsWith(root)) {
+  if (!filePath.startsWith(publicRoot)) {
     res.writeHead(403);
     res.end("Forbidden");
     return;
