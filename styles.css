@@ -362,7 +362,8 @@ textarea:focus,
 .primary-btn,
 .soft-btn,
 .ghost-btn,
-.icon-btn {
+.icon-btn,
+.month-btn {
   border: 0;
   border-radius: 8px;
   min-height: 44px;
@@ -383,10 +384,16 @@ textarea:focus,
 }
 
 .ghost-btn,
-.icon-btn {
+.icon-btn,
+.month-btn {
   background: #eef2f7;
   color: #334155;
   padding: 0 14px;
+}
+
+.month-btn {
+  min-height: 38px;
+  white-space: nowrap;
 }
 
 .result-card,
@@ -1023,7 +1030,8 @@ pre {
   .primary-btn,
   .soft-btn,
   .ghost-btn,
-  .icon-btn {
+  .icon-btn,
+  .month-btn {
     width: 100%;
   }
 
