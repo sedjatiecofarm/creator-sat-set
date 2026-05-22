@@ -1,9 +1,12 @@
-const { parseBody, readSupabaseWorkspaces, sendJson } = require("./_shared");
+const { parseBody, sendJson } = require("./_shared");
 
 const adminEmails = (process.env.ADMIN_EMAILS || "sedjatiecofarm@gmail.com")
   .split(",")
   .map((item) => item.trim().toLowerCase())
   .filter(Boolean);
+const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseTable = process.env.SUPABASE_TABLE || "creator_app_state";
 
 function todayKey() {
   return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -30,6 +33,29 @@ function summarizeWorkspace(row) {
   };
 }
 
+function supabaseHeaders() {
+  return {
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`,
+    "Content-Type": "application/json",
+  };
+}
+
+async function readAdminWorkspaces() {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase env belum lengkap.");
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?select=id,data`, {
+    headers: supabaseHeaders(),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Supabase admin read failed: ${response.status} ${text.slice(0, 180)}`);
+  }
+  return JSON.parse(text || "[]");
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     sendJson(res, 405, { error: "Method not allowed." });
@@ -44,7 +70,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const rows = await readSupabaseWorkspaces();
+    const rows = await readAdminWorkspaces();
     const users = rows
       .map(summarizeWorkspace)
       .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
