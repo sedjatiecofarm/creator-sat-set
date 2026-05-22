@@ -20,6 +20,11 @@ const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabaseTable = process.env.SUPABASE_TABLE || "creator_app_state";
 const supabaseStateId = process.env.SUPABASE_STATE_ID || "creator-sat-set";
+const dailyGenerateLimit = Number(process.env.DAILY_GENERATE_LIMIT || 20);
+const adminEmails = (process.env.ADMIN_EMAILS || "sedjatiecofarm@gmail.com")
+  .split(",")
+  .map((item) => item.trim().toLowerCase())
+  .filter(Boolean);
 const openRouterModels = (process.env.OPENROUTER_MODELS || "")
   .split(",")
   .map((item) => item.trim())
@@ -145,6 +150,59 @@ async function writeDb(data, workspaceId) {
   fs.writeFileSync(dbPath, JSON.stringify(stored, null, 2));
 }
 
+function todayKey() {
+  return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function getRequester(body) {
+  const user = body.user || {};
+  const email = String(user.email || "").trim().toLowerCase();
+  const id = String(user.id || "").trim();
+  const workspaceId = String(body.workspaceId || (id ? `user-${id}` : "") || "").trim();
+  return {
+    email,
+    workspaceId: workspaceId || supabaseStateId,
+    isAdmin: email ? adminEmails.includes(email) : false,
+  };
+}
+
+async function enforceDailyGenerateLimit(body) {
+  const requester = getRequester(body || {});
+  const day = todayKey();
+  if (requester.isAdmin) return { skipped: true, day };
+
+  const db = await readDb(requester.workspaceId);
+  const bucket = db.usage?.[day] || { total: 0, generate: 0, transcribe: 0 };
+  const used = Number(bucket.generate || 0);
+  if (used >= dailyGenerateLimit) {
+    const error = new Error(`Limit generate harian kamu sudah habis (${used}/${dailyGenerateLimit}). Coba lagi besok, atau gunakan akun admin.`);
+    error.statusCode = 429;
+    throw error;
+  }
+
+  return { skipped: false, day, workspaceId: requester.workspaceId };
+}
+
+async function recordServerGenerateUsage(limitState) {
+  if (!limitState) return null;
+  if (limitState.skipped) return { day: limitState.day, limit: null, remaining: null, admin: true };
+
+  const db = await readDb(limitState.workspaceId);
+  const usage = db.usage || {};
+  const bucket = usage[limitState.day] || { total: 0, generate: 0, transcribe: 0 };
+  bucket.total = Number(bucket.total || 0) + 1;
+  bucket.generate = Number(bucket.generate || 0) + 1;
+  usage[limitState.day] = bucket;
+  await writeDb({ ...db, usage }, limitState.workspaceId);
+  return {
+    day: limitState.day,
+    bucket,
+    limit: dailyGenerateLimit,
+    remaining: Math.max(dailyGenerateLimit - bucket.generate, 0),
+    admin: false,
+  };
+}
+
 async function handleSaveDb(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
@@ -243,11 +301,13 @@ function readBody(req) {
 async function handleGenerate(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
+    const limitState = await enforceDailyGenerateLimit(body);
     const prompt = buildPrompt(body);
     const result = await callWithFallback(prompt);
-    sendJson(res, 200, result);
+    const usage = await recordServerGenerateUsage(limitState);
+    sendJson(res, 200, { ...result, usage });
   } catch (error) {
-    sendJson(res, 500, { error: error.message || "Terjadi error di server AI." });
+    sendJson(res, error.statusCode || 500, { error: error.message || "Terjadi error di server AI." });
   }
 }
 

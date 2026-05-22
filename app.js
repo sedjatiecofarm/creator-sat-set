@@ -541,15 +541,21 @@ function getAIContext() {
 
 async function askAI({ topic, instruction, format }) {
   let response;
+  const session = authState.client ? (await authState.client.auth.getSession()).data.session : null;
   try {
     response = await fetch(`${API_BASE}/api/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
       body: JSON.stringify({
         topic,
         instruction,
         format,
         context: getAIContext(),
+        workspaceId: getActiveWorkspaceId(),
+        user: authState.user ? { id: authState.user.id, email: authState.user.email } : null,
       }),
     });
   } catch (error) {
@@ -560,12 +566,16 @@ async function askAI({ topic, instruction, format }) {
   if (!response.ok) {
     throw new Error(data.error || `API AI gagal merespons. Status: ${response.status}`);
   }
+  if (data.usage?.day && data.usage?.bucket) {
+    state.usage[data.usage.day] = data.usage.bucket;
+  }
   recordGeneration({
     type: "Generate AI",
     input: topic,
     output: data.text,
     provider: data.provider,
     model: data.model,
+    skipUsage: Boolean(data.usage),
   });
   return data.text;
 }
@@ -574,16 +584,22 @@ async function transcribeMedia(file) {
   const base64 = await fileToBase64(file);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90_000);
+  const session = authState.client ? (await authState.client.auth.getSession()).data.session : null;
 
   const response = await fetch(`${API_BASE}/api/transcribe`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
     signal: controller.signal,
     body: JSON.stringify({
       fileName: file.name,
       mimeType: file.type || "application/octet-stream",
       dataBase64: base64,
       context: getAIContext(),
+      workspaceId: getActiveWorkspaceId(),
+      user: authState.user ? { id: authState.user.id, email: authState.user.email } : null,
     }),
   }).catch(() => {
     throw new Error(IS_LOCAL_APP ? "Server AI lokal belum aktif atau transkripsi terlalu lama." : "API AI cloud gagal dihubungi atau transkripsi terlalu lama.");
@@ -605,13 +621,15 @@ async function transcribeMedia(file) {
   return data.text;
 }
 
-function recordGeneration({ type, input, output, provider, model }) {
-  const day = todayKey();
-  const bucket = state.usage[day] || { total: 0, generate: 0, transcribe: 0 };
-  bucket.total += 1;
-  if (/transkripsi/i.test(type)) bucket.transcribe += 1;
-  else bucket.generate += 1;
-  state.usage[day] = bucket;
+function recordGeneration({ type, input, output, provider, model, skipUsage = false }) {
+  if (!skipUsage) {
+    const day = todayKey();
+    const bucket = state.usage[day] || { total: 0, generate: 0, transcribe: 0 };
+    bucket.total += 1;
+    if (/transkripsi/i.test(type)) bucket.transcribe += 1;
+    else bucket.generate += 1;
+    state.usage[day] = bucket;
+  }
 
   state.history.unshift({
     id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -844,6 +862,9 @@ function showAIError(container, error) {
 
 function friendlyAIError(message) {
   const text = message || "";
+  if (/Limit generate harian/i.test(text)) {
+    return text;
+  }
   if (/quota|rate limit|exceeded|Too Many Requests|429/i.test(text)) {
     return "Limit gratis Gemini sedang habis untuk model ini. Tunggu beberapa saat sampai kuota reset, atau ganti model/provider. Agar lebih hemat, generate bagian yang benar-benar perlu saja.";
   }
