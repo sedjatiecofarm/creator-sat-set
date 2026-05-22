@@ -55,7 +55,15 @@
           <label>Gaya komunikasi kamu<textarea id="brandTone" placeholder="Contoh: santai, jujur, edukatif, humoris, tegas, membumi"></textarea></label>
           <label>Topik utama dan tujuan konten<textarea id="contentGoal" placeholder="Topik apa yang mau sering dibahas? Tujuannya awareness, trust, edukasi, jualan, komunitas?"></textarea></label>
         </div>
-        <button class="primary-btn" id="generateBlueprint">Generate Brand DNA</button>
+        <section class="upload-blueprint">
+          <div>
+            <h2>Upload Brand DNA</h2>
+            <p class="muted">Kalau sudah punya Brand DNA sendiri, upload file text/markdown. AI akan mencermati, merapikan, dan menyesuaikan arah kontennya.</p>
+          </div>
+          <input class="file-input" id="brandDnaFile" type="file" accept=".txt,.md,text/plain,text/markdown" />
+          <button class="ghost-btn" id="generateBlueprintFromFile" type="button">Generate dari File</button>
+        </section>
+        <button class="primary-btn" id="generateBlueprint">Generate Brand DNA dari Assessment</button>
         <article class="result-card" id="blueprintResult">
           <button class="copy-btn" data-copy="blueprintResultContent">Salin</button>
           <div id="blueprintResultContent">

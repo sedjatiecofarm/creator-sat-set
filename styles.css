@@ -417,6 +417,22 @@ textarea:focus,
   background: #f8fafc;
 }
 
+.upload-blueprint {
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #f8fafc;
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 320px) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.upload-blueprint h2 {
+  margin-bottom: 4px;
+}
+
 .saved-list {
   display: grid;
   gap: 10px;
@@ -805,6 +821,7 @@ pre {
   }
 
   .blueprint-grid,
+  .upload-blueprint,
   .action-row,
   .funnel-tabs,
   .saved-profile {
@@ -916,6 +933,7 @@ pre {
   }
 
   .blueprint-grid,
+  .upload-blueprint,
   .action-row,
   .funnel-tabs,
   .saved-profile {

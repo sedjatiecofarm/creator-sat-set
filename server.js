@@ -494,6 +494,7 @@ KONTEKS BRAND
 - Keresahan audiens: ${context.painPoint || "belum diisi"}
 - Gaya komunikasi: ${context.brandTone || "belum diisi"}
 - Tujuan konten: ${context.contentGoal || "belum diisi"}
+- Brand DNA aktif: ${context.brandDna || "belum ada brand DNA aktif"}
 
 TUGAS
 ${body.instruction || ""}

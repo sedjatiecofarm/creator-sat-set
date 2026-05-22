@@ -566,6 +566,12 @@ function fileToBase64(file) {
   });
 }
 
+async function readBrandDnaFile(file) {
+  if (!file) throw new Error("Pilih file Brand DNA dulu.");
+  if (file.size > 700 * 1024) throw new Error("File Brand DNA terlalu besar. Maksimal 700 KB.");
+  return (await file.text()).trim();
+}
+
 async function initAuth() {
   renderAuthUI();
   try {
@@ -738,6 +744,7 @@ function getBrandContext() {
     painPoint: $("#painPoint").value.trim() || "keresahan audiens",
     brandTone: $("#brandTone").value.trim() || "edukatif, hangat, dan jelas",
     contentGoal: $("#contentGoal").value.trim() || "membangun awareness, trust, dan konversi",
+    brandDna: ($("#blueprintResultContent").innerText || "").trim(),
   };
 }
 
@@ -752,7 +759,7 @@ function setBrandContext(context) {
 
 function blueprintTitle(context) {
   const brand = context.brandName || "Brand tanpa nama";
-  const niche = context.mainOffer || context.contentGoal || "Niche belum diisi";
+  const niche = context.mainOffer || context.contentGoal || "Brand DNA upload";
   return `${brand} - ${niche}`.slice(0, 90);
 }
 
@@ -1125,6 +1132,35 @@ $("#generateBlueprint").addEventListener("click", async (event) => {
     state.lastBlueprintResult = text;
   } catch (error) {
     const errorHtml = `<h2>AI belum tersambung</h2><p>${friendlyAIError(error.message)}</p>`;
+    result.innerHTML = errorHtml;
+    state.lastBlueprintResult = errorHtml;
+  }
+  setLoading(event.currentTarget, false);
+});
+
+$("#generateBlueprintFromFile").addEventListener("click", async (event) => {
+  const file = $("#brandDnaFile").files[0];
+  const result = $("#blueprintResultContent");
+  setLoading(event.currentTarget, true);
+  result.innerHTML = "<h2>AI sedang membaca Brand DNA...</h2><p>Mencermati konsep, arah, experience, dan peluang kontennya.</p>";
+  try {
+    const fileText = await readBrandDnaFile(file);
+    const fileName = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+    if (!$("#brandName").value.trim()) $("#brandName").value = fileName || "Brand dari upload";
+    if (!$("#mainOffer").value.trim()) $("#mainOffer").value = "Brand DNA dari file upload";
+
+    const text = await askAI({
+      topic: `NAMA FILE: ${file.name}\n\nBRAND DNA ASLI:\n${fileText}`,
+      instruction:
+        "Kamu berperan sebagai brand strategist, content director, copywriter, dan creator experience planner. Cermati Brand DNA yang diupload pengguna, pahami konsep brand, arah komunikasi, personality, target market, value, dan experience yang ingin dibangun. Lalu generate ulang menjadi Master Blueprint / Brand DNA yang lebih rapi, tajam, operasional, dan siap dipakai sebagai panduan AI untuk membuat konten.",
+      format:
+        "Format dengan HTML sederhana: <h2>, <p>, <strong>, <ul>, <li>. Wajib ada heading: IDENTITAS BRAND, BRAND ESSENCE, TARGET MARKET, INSIGHT AUDIENS, VALUE PROPOSITION, CONTENT MISSION, PILAR KONTEN, TONE OF VOICE, EXPERIENCE YANG DIBANGUN, AWARENESS/CONSIDERATION/CONVERSION STRATEGY, ATURAN EKSEKUSI, CONTOH ARAH KONTEN. Jangan hanya merapikan kata, tetapi tambahkan interpretasi strategis yang relevan.",
+    });
+    result.innerHTML = text;
+    state.lastBlueprintResult = text;
+    showToast("Brand DNA file berhasil digenerate ulang.");
+  } catch (error) {
+    const errorHtml = `<h2>Brand DNA belum bisa diproses</h2><p>${friendlyAIError(error.message)}</p>`;
     result.innerHTML = errorHtml;
     state.lastBlueprintResult = errorHtml;
   }
