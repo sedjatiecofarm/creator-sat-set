@@ -53,6 +53,9 @@ module.exports = async function handler(req, res) {
       users,
     });
   } catch (error) {
-    sendJson(res, 500, { error: error.message || "Gagal membaca dashboard admin." });
+    sendJson(res, 500, {
+      error: error.message || "Gagal membaca dashboard admin.",
+      detail: "Cek SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, dan nama tabel creator_app_state di Vercel.",
+    });
   }
 };
