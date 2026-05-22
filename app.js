@@ -1189,7 +1189,7 @@ async function loadAdminDashboard() {
       body: JSON.stringify({ email: authState.user.email }),
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Gagal membaca data admin.");
+    if (!response.ok) throw new Error([data.error, data.detail].filter(Boolean).join(" - ") || "Gagal membaca data admin.");
     renderAdminDashboard(data);
   } catch (error) {
     $("#adminRows").innerHTML = `<tr><td colspan="7">Gagal membaca data admin: ${escapeHtml(error.message)}</td></tr>`;
