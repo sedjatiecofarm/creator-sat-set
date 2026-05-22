@@ -758,8 +758,8 @@ function renderAuthUI() {
   if (!loginButton || !logoutButton || !accountName || !accountEmail) return;
   const adminVisible = isAdminUser();
   $$(".admin-only").forEach((item) => {
-    item.hidden = !adminVisible;
-    item.style.display = adminVisible ? "" : "none";
+    item.hidden = false;
+    item.classList.toggle("is-hidden", !adminVisible);
   });
 
   if (!authState.ready) {
