@@ -57,7 +57,7 @@ const state = {
   funnelTopic: "",
   currentFunnel: "tofu",
   selectedDate: null,
-  calendarDate: new Date(2026, 4, 20),
+  calendarDate: new Date(),
   plans: storage.read("creatorPlans", "{}"),
   blueprints: storage.read("creatorBlueprints", "[]"),
   activeBlueprintId: storage.read("activeBlueprintId", "null"),
@@ -942,7 +942,8 @@ function renderCalendar() {
   for (let day = 1; day <= totalDays; day += 1) {
     const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const button = document.createElement("button");
-    const isToday = year === 2026 && month === 4 && day === 20;
+    const today = new Date();
+    const isToday = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
     button.className = `day${isToday ? " today" : ""}${state.plans[key] ? " has-plan" : ""}`;
     button.type = "button";
     button.innerHTML = `<span>${day}</span>${state.plans[key] ? `<small>${state.plans[key].title}</small>` : ""}`;
