@@ -406,7 +406,7 @@ async function readSupabaseDb(workspaceId) {
 
 async function readSupabaseWorkspaces() {
   if (!hasSupabaseConfig()) throw new Error("Supabase env belum lengkap.");
-  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?select=id,data&order=updated_at.desc`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?select=id,data`, {
     headers: supabaseHeaders(),
   });
   if (!response.ok) throw new Error(`Supabase admin read failed: ${response.status}`);

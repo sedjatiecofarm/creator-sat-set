@@ -256,9 +256,12 @@ async function handleAdmin(req, res) {
     }
 
     const rows = await readSupabaseWorkspaces();
+    const users = rows
+      .map(summarizeWorkspace)
+      .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
     sendJson(res, 200, {
       today: todayKey(),
-      users: rows.map(summarizeWorkspace),
+      users,
     });
   } catch (error) {
     sendJson(res, 500, { error: error.message || "Gagal membaca dashboard admin." });
@@ -304,7 +307,7 @@ async function readSupabaseDb(workspaceId) {
 async function readSupabaseWorkspaces() {
   if (!hasSupabaseConfig()) return [];
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?select=id,data&order=updated_at.desc`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?select=id,data`, {
     headers: supabaseHeaders(),
   });
 

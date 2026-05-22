@@ -756,6 +756,11 @@ function renderAuthUI() {
   const accountName = $("#accountName");
   const accountEmail = $("#accountEmail");
   if (!loginButton || !logoutButton || !accountName || !accountEmail) return;
+  const adminVisible = isAdminUser();
+  $$(".admin-only").forEach((item) => {
+    item.hidden = !adminVisible;
+    item.style.display = adminVisible ? "" : "none";
+  });
 
   if (!authState.ready) {
     loginButton.hidden = false;
@@ -768,9 +773,6 @@ function renderAuthUI() {
   }
 
   const user = authState.user;
-  $$(".admin-only").forEach((item) => {
-    item.hidden = !isAdminUser();
-  });
   loginButton.hidden = Boolean(user);
   loginButton.disabled = false;
   loginButton.textContent = "Login Google";
@@ -1190,7 +1192,7 @@ async function loadAdminDashboard() {
     if (!response.ok) throw new Error(data.error || "Gagal membaca data admin.");
     renderAdminDashboard(data);
   } catch (error) {
-    $("#adminRows").innerHTML = `<tr><td colspan="7">${escapeHtml(error.message)}</td></tr>`;
+    $("#adminRows").innerHTML = `<tr><td colspan="7">Gagal membaca data admin: ${escapeHtml(error.message)}</td></tr>`;
     $("#adminSummary").innerHTML = "";
   }
 }

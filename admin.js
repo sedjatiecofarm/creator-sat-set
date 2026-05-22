@@ -45,9 +45,12 @@ module.exports = async function handler(req, res) {
     }
 
     const rows = await readSupabaseWorkspaces();
+    const users = rows
+      .map(summarizeWorkspace)
+      .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
     sendJson(res, 200, {
       today: todayKey(),
-      users: rows.map(summarizeWorkspace),
+      users,
     });
   } catch (error) {
     sendJson(res, 500, { error: error.message || "Gagal membaca dashboard admin." });
