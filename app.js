@@ -62,6 +62,7 @@ const state = {
   blueprints: storage.read("creatorBlueprints", "[]"),
   activeBlueprintId: storage.read("activeBlueprintId", "null"),
   lastBlueprintResult: "",
+  blueprintCreatesNew: false,
 };
 
 const emptyBlueprintHtml = `
@@ -672,6 +673,7 @@ function clearLocalSessionState() {
   state.blueprints = [];
   state.activeBlueprintId = null;
   state.lastBlueprintResult = "";
+  state.blueprintCreatesNew = false;
   state.scriptParts = {};
   state.funnelParts = {};
   state.funnelTopic = "";
@@ -978,6 +980,7 @@ function activateBlueprint(id) {
   const profile = state.blueprints.find((item) => item.id === id);
   if (!profile) return;
   state.activeBlueprintId = id;
+  state.blueprintCreatesNew = false;
   setBrandContext(profile.context);
   state.lastBlueprintResult = profile.result || "";
   if (profile.result) $("#blueprintResultContent").innerHTML = profile.result;
@@ -993,6 +996,7 @@ function activateBlueprint(id) {
 function deleteBlueprint(id) {
   state.blueprints = state.blueprints.filter((item) => item.id !== id);
   if (state.activeBlueprintId === id) state.activeBlueprintId = null;
+  if (!state.activeBlueprintId) state.blueprintCreatesNew = true;
   persistBlueprints();
   renderSavedBlueprints();
   showToast("Blueprint dihapus.");
@@ -1006,7 +1010,7 @@ function saveCurrentBlueprint() {
     return;
   }
 
-  const existingId = state.activeBlueprintId;
+  const existingId = state.blueprintCreatesNew ? null : state.activeBlueprintId;
   const id = existingId || `bp-${Date.now()}`;
   const profile = {
     id,
@@ -1024,6 +1028,7 @@ function saveCurrentBlueprint() {
   }
 
   state.activeBlueprintId = id;
+  state.blueprintCreatesNew = false;
   persistBlueprints();
   renderSavedBlueprints();
   showToast("Blueprint tersimpan dan aktif.");
@@ -1107,6 +1112,7 @@ $("#logoutGoogle").addEventListener("click", logoutGoogle);
 
 $("#blueprintSample").addEventListener("click", () => {
   state.activeBlueprintId = null;
+  state.blueprintCreatesNew = true;
   $("#brandName").value = "Sedjati Eco Farm";
   $("#mainOffer").value = "Domba Garut sehat, edukasi ternak, dan pendampingan peternak.";
   $("#audience").value = "Peternak pemula, calon pembeli domba, dan orang yang ingin mulai usaha ternak.";
@@ -1118,6 +1124,7 @@ $("#blueprintSample").addEventListener("click", () => {
 $("#generateBlueprint").addEventListener("click", async (event) => {
   const context = getBrandContext();
   const result = $("#blueprintResultContent");
+  state.blueprintCreatesNew = !state.activeBlueprintId;
   setLoading(event.currentTarget, true);
   result.innerHTML = "<h2>AI sedang menyusun Master Blueprint...</h2><p>Membaca assessment dan merumuskan arah konten.</p>";
   try {
@@ -1141,13 +1148,19 @@ $("#generateBlueprint").addEventListener("click", async (event) => {
 $("#generateBlueprintFromFile").addEventListener("click", async (event) => {
   const file = $("#brandDnaFile").files[0];
   const result = $("#blueprintResultContent");
+  state.activeBlueprintId = null;
+  state.blueprintCreatesNew = true;
   setLoading(event.currentTarget, true);
   result.innerHTML = "<h2>AI sedang membaca Brand DNA...</h2><p>Mencermati konsep, arah, experience, dan peluang kontennya.</p>";
   try {
     const fileText = await readBrandDnaFile(file);
     const fileName = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
-    if (!$("#brandName").value.trim()) $("#brandName").value = fileName || "Brand dari upload";
-    if (!$("#mainOffer").value.trim()) $("#mainOffer").value = "Brand DNA dari file upload";
+    $("#brandName").value = fileName || "Brand dari upload";
+    $("#mainOffer").value = "Brand DNA dari file upload";
+    $("#audience").value = "";
+    $("#painPoint").value = "";
+    $("#brandTone").value = "";
+    $("#contentGoal").value = "";
 
     const text = await askAI({
       topic: `NAMA FILE: ${file.name}\n\nBRAND DNA ASLI:\n${fileText}`,
