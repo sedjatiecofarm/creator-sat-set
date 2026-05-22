@@ -579,7 +579,7 @@ textarea:focus,
 }
 
 .draft-card h2 {
-  color: var(--gold);
+  color: #ffffff;
   margin-bottom: 14px;
 }
 
