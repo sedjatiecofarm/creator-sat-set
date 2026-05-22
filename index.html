@@ -26,6 +26,7 @@
         <button class="nav-item" data-section="video"><b class="menu-icon">▶</b>Video ke Text</button>
         <button class="nav-item" data-section="funnel"><b class="menu-icon">↗</b>Konten Express</button>
         <button class="nav-item" data-section="plan"><b class="menu-icon">▣</b>Kalendar Konten</button>
+        <button class="nav-item" data-section="history"><b class="menu-icon">◷</b>Riwayat</button>
       </nav>
       <div class="account">
         <div class="avatar ny-mark"><i>Y</i><i>N</i></div>
@@ -240,11 +241,24 @@
           <button class="primary-btn" id="savePlan">Simpan Plan</button>
         </div>
       </section>
+
+      <section class="panel view" id="history">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Usage & History</p>
+            <h1>Riwayat Generate</h1>
+            <p class="muted">Pantau hasil generate, transkripsi, dan pemakaian harian akun ini.</p>
+          </div>
+          <button class="ghost-btn" id="clearHistory">Hapus Riwayat</button>
+        </div>
+        <div class="usage-grid" id="usageSummary"></div>
+        <div class="history-list" id="historyList"></div>
+      </section>
     </main>
 
     <div class="toast" id="toast"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260522-login-fallback"></script>
   </body>
 </html>
 

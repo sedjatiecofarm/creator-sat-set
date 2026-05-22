@@ -83,6 +83,7 @@ const authState = {
   client: null,
   user: null,
   ready: false,
+  error: "",
 };
 
 showAuthRedirectError();
@@ -650,8 +651,17 @@ async function initAuth() {
     const response = await fetch(`${API_BASE}/api/config`);
     if (!response.ok) throw new Error("Config auth tidak tersedia.");
     const config = await response.json();
-    if (!config.supabaseUrl || !config.supabasePublishableKey || !window.supabase?.createClient) {
+    if (!config.supabaseUrl || !config.supabasePublishableKey) {
       authState.ready = false;
+      authState.error = "Konfigurasi login belum lengkap. Cek SUPABASE_URL dan SUPABASE_PUBLISHABLE_KEY di Vercel.";
+      renderAuthUI();
+      return;
+    }
+
+    const sdkReady = await ensureSupabaseSdk();
+    if (!sdkReady) {
+      authState.ready = false;
+      authState.error = "Library login Supabase gagal dimuat. Coba reload halaman atau nonaktifkan extension yang memblokir CDN.";
       renderAuthUI();
       return;
     }
@@ -660,6 +670,7 @@ async function initAuth() {
     const { data } = await authState.client.auth.getSession();
     authState.user = data.session?.user || null;
     authState.ready = true;
+    authState.error = "";
 
     authState.client.auth.onAuthStateChange(async (event, session) => {
       const previousUserId = authState.user?.id || null;
@@ -672,8 +683,47 @@ async function initAuth() {
     });
   } catch (error) {
     authState.ready = false;
+    authState.error = "Login Google belum siap. Cek /api/config dan redeploy Vercel.";
     renderAuthUI();
   }
+}
+
+function loadExternalScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureSupabaseSdk() {
+  if (window.supabase?.createClient) return true;
+
+  const sources = [
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+    "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js",
+  ];
+
+  for (const src of sources) {
+    try {
+      await loadExternalScript(src);
+      if (window.supabase?.createClient) return true;
+    } catch (error) {
+      // Try the next CDN.
+    }
+  }
+
+  return false;
 }
 
 function renderAuthUI() {
@@ -704,7 +754,7 @@ function renderAuthUI() {
 
 async function loginWithGoogle() {
   if (!authState.client) {
-    showToast("Login Google belum aktif. Tambahkan SUPABASE_PUBLISHABLE_KEY dulu.");
+    showToast(authState.error || "Login Google belum siap. Reload halaman lalu coba lagi.");
     return;
   }
 
