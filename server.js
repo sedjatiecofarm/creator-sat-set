@@ -105,6 +105,8 @@ function defaultDb() {
     plans: {},
     blueprints: [],
     activeBlueprintId: null,
+    history: [],
+    usage: {},
     updatedAt: null,
   };
 }
@@ -152,6 +154,8 @@ async function handleSaveDb(req, res) {
       plans: body.plans || current.plans || {},
       blueprints: body.blueprints || current.blueprints || [],
       activeBlueprintId: body.activeBlueprintId ?? current.activeBlueprintId ?? null,
+      history: Array.isArray(body.history) ? body.history.slice(0, 100) : current.history || [],
+      usage: body.usage || current.usage || {},
     }, workspaceId);
     sendJson(res, 200, { ok: true });
   } catch (error) {

@@ -40,6 +40,8 @@ const db = {
         plans: state.plans,
         blueprints: state.blueprints,
         activeBlueprintId: state.activeBlueprintId,
+        history: state.history,
+        usage: state.usage,
       }),
     }).catch(() => {
       this.ready = false;
@@ -61,6 +63,8 @@ const state = {
   plans: storage.read("creatorPlans", "{}"),
   blueprints: storage.read("creatorBlueprints", "[]"),
   activeBlueprintId: storage.read("activeBlueprintId", "null"),
+  history: storage.read("creatorHistory", "[]"),
+  usage: storage.read("creatorUsage", "{}"),
   lastBlueprintResult: "",
   blueprintCreatesNew: false,
 };
@@ -108,6 +112,16 @@ function cleanWorkspaceId(value) {
 
 function getActiveWorkspaceId() {
   return authState.user?.id ? `user-${authState.user.id}` : WORKSPACE_ID;
+}
+
+function todayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function shortText(value, limit = 700) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text.length > limit ? `${text.slice(0, limit)}...` : text;
 }
 
 function showAuthRedirectError() {
@@ -545,6 +559,13 @@ async function askAI({ topic, instruction, format }) {
   if (!response.ok) {
     throw new Error(data.error || `API AI gagal merespons. Status: ${response.status}`);
   }
+  recordGeneration({
+    type: "Generate AI",
+    input: topic,
+    output: data.text,
+    provider: data.provider,
+    model: data.model,
+  });
   return data.text;
 }
 
@@ -573,7 +594,39 @@ async function transcribeMedia(file) {
   if (!response.ok) {
     throw new Error(data.error || `Transkripsi gagal. Status: ${response.status}`);
   }
+  recordGeneration({
+    type: "Transkripsi",
+    input: file.name,
+    output: data.text,
+    provider: data.provider,
+    model: "Gemini multimodal",
+  });
   return data.text;
+}
+
+function recordGeneration({ type, input, output, provider, model }) {
+  const day = todayKey();
+  const bucket = state.usage[day] || { total: 0, generate: 0, transcribe: 0 };
+  bucket.total += 1;
+  if (/transkripsi/i.test(type)) bucket.transcribe += 1;
+  else bucket.generate += 1;
+  state.usage[day] = bucket;
+
+  state.history.unshift({
+    id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    input: shortText(input, 900),
+    output: shortText(output, 4000),
+    provider: provider || "-",
+    model: model || "-",
+    brand: getBrandContext().brandName,
+    createdAt: new Date().toISOString(),
+  });
+  state.history = state.history.slice(0, 100);
+  storage.write("creatorHistory", state.history);
+  storage.write("creatorUsage", state.usage);
+  renderHistory();
+  db.saveSoon();
 }
 
 function fileToBase64(file) {
@@ -690,6 +743,8 @@ function clearLocalSessionState() {
   state.plans = {};
   state.blueprints = [];
   state.activeBlueprintId = null;
+  state.history = [];
+  state.usage = {};
   state.lastBlueprintResult = "";
   state.blueprintCreatesNew = false;
   state.scriptParts = {};
@@ -720,6 +775,7 @@ function renderWorkspaceState() {
   $("#funnelChoices").innerHTML = "";
   renderCalendar();
   renderSavedBlueprints();
+  renderHistory();
 }
 
 function showAIError(container, error) {
@@ -995,6 +1051,44 @@ function renderSavedBlueprints() {
 
     card.append(info, useButton, deleteButton);
     list.appendChild(card);
+  });
+}
+
+function renderHistory() {
+  const usageWrap = $("#usageSummary");
+  const historyWrap = $("#historyList");
+  if (!usageWrap || !historyWrap) return;
+
+  const today = state.usage[todayKey()] || { total: 0, generate: 0, transcribe: 0 };
+  usageWrap.innerHTML = [
+    ["Total hari ini", today.total || 0],
+    ["Generate teks", today.generate || 0],
+    ["Transkripsi", today.transcribe || 0],
+  ]
+    .map(([label, value]) => `<div class="usage-card"><strong>${value}</strong><span>${label}</span></div>`)
+    .join("");
+
+  historyWrap.innerHTML = "";
+  if (!state.history.length) {
+    historyWrap.innerHTML = '<p class="muted">Belum ada riwayat generate.</p>';
+    return;
+  }
+
+  state.history.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "history-item";
+    const date = new Date(item.createdAt);
+    card.innerHTML = `
+      <h3>${escapeHtml(item.type)} - ${escapeHtml(item.brand || "Brand")}</h3>
+      <div class="history-meta">${date.toLocaleString("id-ID")} | ${escapeHtml(item.provider || "-")} | ${escapeHtml(item.model || "-")}</div>
+      <p><strong>Input:</strong> ${escapeHtml(item.input)}</p>
+      <p><strong>Output:</strong> ${escapeHtml(item.output)}</p>
+      <div class="history-actions">
+        <button class="tiny-btn" type="button">Salin Output</button>
+      </div>
+    `;
+    card.querySelector("button").addEventListener("click", () => copyText(item.output));
+    historyWrap.appendChild(card);
   });
 }
 
@@ -1380,28 +1474,49 @@ $("#savePlan").addEventListener("click", () => {
 
 $("#exportCsv").addEventListener("click", exportCalendarCsv);
 $("#exportJson").addEventListener("click", exportCalendarJson);
+$("#clearHistory").addEventListener("click", () => {
+  state.history = [];
+  state.usage = {};
+  storage.write("creatorHistory", state.history);
+  storage.write("creatorUsage", state.usage);
+  renderHistory();
+  db.saveSoon();
+  showToast("Riwayat generate dihapus.");
+});
 
 async function loadWorkspaceState() {
   const isLoggedIn = Boolean(authState.user);
   const localPlans = storage.read("creatorPlans", "{}");
   const localBlueprints = storage.read("creatorBlueprints", "[]");
   const localActiveBlueprintId = storage.read("activeBlueprintId", "null");
+  const localHistory = storage.read("creatorHistory", "[]");
+  const localUsage = storage.read("creatorUsage", "{}");
   state.plans = isLoggedIn ? {} : localPlans;
   state.blueprints = isLoggedIn ? [] : localBlueprints;
   state.activeBlueprintId = isLoggedIn ? null : localActiveBlueprintId;
+  state.history = isLoggedIn ? [] : localHistory;
+  state.usage = isLoggedIn ? {} : localUsage;
   state.lastBlueprintResult = "";
 
   const data = await db.load();
   if (data) {
-    const backendHasData = Object.keys(data.plans || {}).length || (data.blueprints || []).length;
+    const backendHasData =
+      Object.keys(data.plans || {}).length ||
+      (data.blueprints || []).length ||
+      (data.history || []).length ||
+      Object.keys(data.usage || {}).length;
 
     if (backendHasData) {
       state.plans = data.plans || {};
       state.blueprints = data.blueprints || [];
       state.activeBlueprintId = data.activeBlueprintId || null;
-    } else if (!isLoggedIn && (Object.keys(localPlans).length || localBlueprints.length)) {
+      state.history = data.history || [];
+      state.usage = data.usage || {};
+    } else if (!isLoggedIn && (Object.keys(localPlans).length || localBlueprints.length || localHistory.length || Object.keys(localUsage).length)) {
       state.plans = localPlans;
       state.blueprints = localBlueprints;
+      state.history = localHistory;
+      state.usage = localUsage;
       db.saveNow();
     }
   }
