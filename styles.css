@@ -417,8 +417,10 @@ textarea:focus,
 }
 
 .month-btn {
+  width: 52px;
   min-height: 38px;
   white-space: nowrap;
+  padding: 0;
 }
 
 .result-card,
