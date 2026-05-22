@@ -359,6 +359,13 @@ textarea:focus,
   margin: 14px 0;
 }
 
+.file-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
 .primary-btn,
 .soft-btn,
 .ghost-btn,
@@ -1054,6 +1061,10 @@ pre {
   }
 
   .chat-form {
+    grid-template-columns: 1fr;
+  }
+
+  .file-row {
     grid-template-columns: 1fr;
   }
 

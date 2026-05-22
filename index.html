@@ -133,7 +133,10 @@
             <p class="muted">Maksimal file video/audio: 4 MB.</p>
           </div>
         </div>
-        <input class="file-input" id="videoFile" type="file" accept="video/*,audio/*" />
+        <div class="file-row">
+          <input class="file-input" id="videoFile" type="file" accept="video/*,audio/*" />
+          <button class="ghost-btn" id="resetVideoFile" type="button">Reset</button>
+        </div>
         <button class="primary-btn" id="transcribeVideo">Ambil Percakapan ke Text</button>
         <textarea class="large-textarea" id="videoScript" placeholder="Transkrip percakapan/caption dari video akan muncul di sini."></textarea>
         <button class="ghost-btn copy-inline" data-copy-value="videoScript">Salin Text</button>

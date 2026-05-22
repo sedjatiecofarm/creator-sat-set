@@ -1259,6 +1259,17 @@ $("#transcribeVideo").addEventListener("click", async (event) => {
   }
 });
 
+$("#resetVideoFile").addEventListener("click", () => {
+  $("#videoFile").value = "";
+  $("#videoScript").value = "";
+  $("#remixTopic").value = "";
+  $("#remixResult").value = "";
+  const button = $("#transcribeVideo");
+  button.disabled = false;
+  button.textContent = button.dataset.originalText || "Ambil Percakapan ke Text";
+  showToast("Video ke Text direset.");
+});
+
 $("#remixScript").addEventListener("click", async (event) => {
   const topic = $("#remixTopic").value.trim();
   if (!topic) {
