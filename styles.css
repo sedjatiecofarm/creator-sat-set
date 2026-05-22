@@ -1,14 +1,17 @@
 :root {
   --ink: #0f172a;
-  --nav: #3f4652;
+  --nav: #2f927a;
   --muted: #64748b;
   --line: #dbe3ef;
   --paper: #ffffff;
-  --wash: #f5f7fb;
-  --gold: #fbbf24;
+  --wash: #d7f4ee;
+  --gold: #2f927a;
   --green: #16a34a;
   --blue: #2563eb;
   --red: #ef4444;
+  --teal-dark: #176b59;
+  --teal-soft: #e7f8f4;
+  --teal-line: #9ed8cb;
 }
 
 * {
@@ -74,8 +77,8 @@ textarea {
   width: 38px;
   height: 38px;
   border-radius: 8px;
-  background: #fef3c7;
-  color: #92400e;
+  background: #e7f8f4;
+  color: var(--teal-dark);
   font-weight: 900;
 }
 
@@ -85,7 +88,7 @@ textarea {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 900;
   line-height: 1;
-  color: #92400e;
+  color: var(--teal-dark);
 }
 
 .ny-mark i:first-child {
@@ -129,8 +132,8 @@ textarea {
   border-radius: 6px;
   display: grid;
   place-items: center;
-  background: #596272;
-  color: #fbbf24;
+  background: rgb(255 255 255 / 17%);
+  color: #ecfffb;
   font-size: 16px;
   line-height: 1;
   flex: 0 0 auto;
@@ -139,13 +142,14 @@ textarea {
 .nav-item.active,
 .nav-item:hover {
   background: var(--gold);
-  color: #111827;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%);
 }
 
 .nav-item.active .menu-icon,
 .nav-item:hover .menu-icon {
-  background: #2f3642;
-  color: var(--gold);
+  background: #ffffff;
+  color: var(--teal-dark);
 }
 
 .account {
@@ -163,13 +167,13 @@ textarea {
   height: 36px;
   border-radius: 8px;
   display: block;
-  background: #596272;
-  color: var(--gold);
+  background: rgb(255 255 255 / 17%);
+  color: #ecfffb;
   font-weight: 900;
 }
 
 .avatar.ny-mark i {
-  color: var(--gold);
+  color: #ecfffb;
 }
 
 .avatar.ny-mark i:first-child {
@@ -205,13 +209,13 @@ textarea {
   border: 0;
   border-radius: 8px;
   background: var(--gold);
-  color: #111827;
+  color: #ffffff;
   cursor: pointer;
   font-weight: 900;
 }
 
 .auth-btn.muted-btn {
-  background: #596272;
+  background: rgb(255 255 255 / 17%);
   color: #f8fafc;
 }
 
@@ -232,7 +236,7 @@ textarea {
   min-height: 38px;
   border: 0;
   border-radius: 8px;
-  background: #111827;
+  background: var(--teal-dark);
   color: #f8fafc;
   padding: 0 16px;
   cursor: pointer;
@@ -380,7 +384,7 @@ textarea:focus,
 
 .primary-btn {
   background: var(--gold);
-  color: #111827;
+  color: #ffffff;
   padding: 0 18px;
 }
 
@@ -412,8 +416,8 @@ textarea:focus,
 }
 
 .result-card {
-  border: 1px solid #fde68a;
-  background: #fffbeb;
+  border: 1px solid var(--teal-line);
+  background: var(--teal-soft);
 }
 
 .saved-blueprints {
@@ -489,7 +493,7 @@ textarea:focus,
 }
 
 .draft-card {
-  background: #111827;
+  background: #123d35;
   color: #f8fafc;
 }
 
@@ -530,11 +534,11 @@ pre {
 }
 
 .choice {
-  border: 1px solid #facc15;
-  background: #fffbeb;
+  border: 1px solid var(--teal-line);
+  background: var(--teal-soft);
   border-radius: 8px;
   padding: 13px 14px;
-  color: #713f12;
+  color: #145346;
   line-height: 1.5;
   white-space: pre-wrap;
   display: block;
@@ -543,9 +547,9 @@ pre {
 }
 
 .choice.selected {
-  background: #fef3c7;
-  border-color: #ca8a04;
-  box-shadow: inset 0 0 0 1px #ca8a04;
+  background: #d7f4ee;
+  border-color: var(--teal-dark);
+  box-shadow: inset 0 0 0 1px var(--teal-dark);
 }
 
 .choice-text {
@@ -605,14 +609,14 @@ pre {
   border-radius: 8px;
   padding: 0 12px;
   background: #fff;
-  color: #713f12;
+  color: #145346;
   cursor: pointer;
   font-weight: 900;
 }
 
 .choice-action.primary {
   background: var(--gold);
-  color: #111827;
+  color: #ffffff;
 }
 
 .copy-inline {
@@ -647,7 +651,7 @@ pre {
 }
 
 .bubble.user {
-  background: #111827;
+  background: #123d35;
   color: #fff;
   align-self: flex-end;
 }
@@ -695,9 +699,9 @@ pre {
 }
 
 .funnel-note {
-  border: 1px solid #fde68a;
-  background: #fffbeb;
-  color: #713f12;
+  border: 1px solid var(--teal-line);
+  background: var(--teal-soft);
+  color: #145346;
   border-radius: 8px;
   padding: 12px 14px;
   font-weight: 800;
@@ -767,6 +771,7 @@ pre {
 
 .day.today {
   background: var(--gold);
+  color: #ffffff;
 }
 
 .day.has-plan {
@@ -800,7 +805,7 @@ pre {
   position: fixed;
   right: 22px;
   bottom: 22px;
-  background: #111827;
+  background: #123d35;
   color: #fff;
   border-radius: 8px;
   padding: 12px 16px;
