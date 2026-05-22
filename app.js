@@ -79,6 +79,7 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const API_BASE = window.location.protocol === "file:" ? "http://localhost:8787" : "";
 const IS_LOCAL_APP = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
 const WORKSPACE_ID = getWorkspaceId();
+const ADMIN_EMAILS = ["sedjatiecofarm@gmail.com"];
 const authState = {
   client: null,
   user: null,
@@ -113,6 +114,10 @@ function cleanWorkspaceId(value) {
 
 function getActiveWorkspaceId() {
   return authState.user?.id ? `user-${authState.user.id}` : WORKSPACE_ID;
+}
+
+function isAdminUser() {
+  return ADMIN_EMAILS.includes(String(authState.user?.email || "").trim().toLowerCase());
 }
 
 function todayKey() {
@@ -639,6 +644,7 @@ function recordGeneration({ type, input, output, provider, model, skipUsage = fa
     provider: provider || "-",
     model: model || "-",
     brand: getBrandContext().brandName,
+    userEmail: authState.user?.email || "",
     createdAt: new Date().toISOString(),
   });
   state.history = state.history.slice(0, 100);
@@ -762,6 +768,9 @@ function renderAuthUI() {
   }
 
   const user = authState.user;
+  $$(".admin-only").forEach((item) => {
+    item.hidden = !isAdminUser();
+  });
   loginButton.hidden = Boolean(user);
   loginButton.disabled = false;
   loginButton.textContent = "Login Google";
@@ -1163,6 +1172,67 @@ function renderHistory() {
   });
 }
 
+async function loadAdminDashboard() {
+  if (!isAdminUser()) {
+    $("#adminRows").innerHTML = '<tr><td colspan="7">Dashboard admin hanya untuk akun admin.</td></tr>';
+    $("#adminSummary").innerHTML = "";
+    return;
+  }
+
+  $("#adminRows").innerHTML = '<tr><td colspan="7">Memuat data admin...</td></tr>';
+  try {
+    const response = await fetch(`${API_BASE}/api/admin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: authState.user.email }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Gagal membaca data admin.");
+    renderAdminDashboard(data);
+  } catch (error) {
+    $("#adminRows").innerHTML = `<tr><td colspan="7">${escapeHtml(error.message)}</td></tr>`;
+    $("#adminSummary").innerHTML = "";
+  }
+}
+
+function renderAdminDashboard(data) {
+  const users = data.users || [];
+  const totalGenerate = users.reduce((sum, user) => sum + Number(user.generateToday || 0), 0);
+  const totalTranscribe = users.reduce((sum, user) => sum + Number(user.transcribeToday || 0), 0);
+  const activeUsers = users.filter((user) => user.generateToday || user.transcribeToday).length;
+
+  $("#adminSummary").innerHTML = [
+    ["User tersimpan", users.length],
+    ["Aktif hari ini", activeUsers],
+    ["Generate hari ini", totalGenerate],
+    ["Transkripsi hari ini", totalTranscribe],
+  ]
+    .map(([label, value]) => `<div class="usage-card"><strong>${value}</strong><span>${label}</span></div>`)
+    .join("");
+
+  if (!users.length) {
+    $("#adminRows").innerHTML = '<tr><td colspan="7">Belum ada data user.</td></tr>';
+    return;
+  }
+
+  $("#adminRows").innerHTML = users
+    .map((user) => {
+      const date = user.updatedAt ? new Date(user.updatedAt).toLocaleString("id-ID") : "-";
+      return `
+        <tr>
+          <td><strong>${escapeHtml(user.email || "-")}</strong><span>${escapeHtml(user.id)}</span></td>
+          <td>${escapeHtml(user.activeBrand || "-")}</td>
+          <td>${Number(user.generateToday || 0)}</td>
+          <td>${Number(user.transcribeToday || 0)}</td>
+          <td>${Number(user.blueprintCount || 0)}</td>
+          <td>${Number(user.historyCount || 0)}</td>
+          <td>${escapeHtml(date)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
 function activateBlueprint(id) {
   const profile = state.blueprints.find((item) => item.id === id);
   if (!profile) return;
@@ -1304,6 +1374,7 @@ $$(".nav-item").forEach((item) => {
     $$(".view").forEach((view) => view.classList.remove("active"));
     item.classList.add("active");
     $(`#${item.dataset.section}`).classList.add("active");
+    if (item.dataset.section === "admin") loadAdminDashboard();
     if (window.innerWidth <= 920) toggleSidebar(false);
   });
 });
@@ -1545,6 +1616,7 @@ $("#savePlan").addEventListener("click", () => {
 
 $("#exportCsv").addEventListener("click", exportCalendarCsv);
 $("#exportJson").addEventListener("click", exportCalendarJson);
+$("#refreshAdmin").addEventListener("click", loadAdminDashboard);
 $("#clearHistory").addEventListener("click", () => {
   state.history = [];
   state.usage = {};

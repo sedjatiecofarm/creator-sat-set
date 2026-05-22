@@ -76,6 +76,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (requestUrl.pathname === "/api/admin" && req.method === "POST") {
+    await handleAdmin(req, res);
+    return;
+  }
+
   serveStatic(req, res);
 });
 
@@ -221,6 +226,45 @@ async function handleSaveDb(req, res) {
   }
 }
 
+function summarizeWorkspace(row) {
+  const data = row.data || {};
+  const day = todayKey();
+  const today = data.usage?.[day] || { total: 0, generate: 0, transcribe: 0 };
+  const activeBlueprint = (data.blueprints || []).find((item) => item.id === data.activeBlueprintId);
+  const latestHistory = (data.history || [])[0];
+
+  return {
+    id: row.id,
+    email: latestHistory?.userEmail || data.userEmail || "",
+    activeBrand: activeBlueprint?.context?.brandName || latestHistory?.brand || "-",
+    generateToday: Number(today.generate || 0),
+    transcribeToday: Number(today.transcribe || 0),
+    totalToday: Number(today.total || 0),
+    historyCount: (data.history || []).length,
+    blueprintCount: (data.blueprints || []).length,
+    updatedAt: data.updatedAt || null,
+  };
+}
+
+async function handleAdmin(req, res) {
+  try {
+    const body = JSON.parse(await readBody(req));
+    const requesterEmail = String(body.email || "").trim().toLowerCase();
+    if (!adminEmails.includes(requesterEmail)) {
+      sendJson(res, 403, { error: "Dashboard admin hanya untuk akun admin." });
+      return;
+    }
+
+    const rows = await readSupabaseWorkspaces();
+    sendJson(res, 200, {
+      today: todayKey(),
+      users: rows.map(summarizeWorkspace),
+    });
+  } catch (error) {
+    sendJson(res, 500, { error: error.message || "Gagal membaca dashboard admin." });
+  }
+}
+
 function hasSupabaseConfig() {
   return Boolean(supabaseUrl && supabaseKey);
 }
@@ -255,6 +299,21 @@ async function readSupabaseDb(workspaceId) {
   const rows = await response.json();
   const data = rows?.[0]?.data;
   return data ? { ...defaultDb(), ...data } : defaultDb();
+}
+
+async function readSupabaseWorkspaces() {
+  if (!hasSupabaseConfig()) return [];
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?select=id,data&order=updated_at.desc`, {
+    headers: supabaseHeaders(),
+  });
+
+  if (!response.ok) {
+    console.warn(`Supabase admin read failed: ${response.status}`);
+    return [];
+  }
+
+  return response.json();
 }
 
 async function writeSupabaseDb(data, workspaceId) {

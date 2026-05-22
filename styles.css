@@ -530,6 +530,102 @@ textarea:focus,
   gap: 10px;
 }
 
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.usage-card,
+.history-item {
+  border-radius: 12px;
+  background: var(--nav);
+  box-shadow: 5px 5px 12px rgb(181 190 177 / 42%), -5px -5px 12px rgb(255 255 255 / 86%);
+}
+
+.usage-card {
+  padding: 16px;
+}
+
+.usage-card strong,
+.usage-card span {
+  display: block;
+}
+
+.usage-card strong {
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.usage-card span,
+.history-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.history-item {
+  padding: 16px;
+}
+
+.history-item h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.history-item p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.history-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  background: var(--nav);
+  box-shadow: inset 4px 4px 10px rgb(181 190 177 / 36%), inset -4px -4px 10px rgb(255 255 255 / 82%);
+  padding: 10px;
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.admin-table th {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.admin-table td span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 .saved-profile {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -916,6 +1012,7 @@ pre {
   .blueprint-grid,
   .script-settings,
   .upload-blueprint,
+  .usage-grid,
   .action-row,
   .funnel-tabs,
   .saved-profile {
@@ -1029,6 +1126,7 @@ pre {
   .blueprint-grid,
   .script-settings,
   .upload-blueprint,
+  .usage-grid,
   .action-row,
   .funnel-tabs,
   .saved-profile {

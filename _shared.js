@@ -404,6 +404,15 @@ async function readSupabaseDb(workspaceId) {
   return data ? { ...defaultDb(), ...data } : defaultDb();
 }
 
+async function readSupabaseWorkspaces() {
+  if (!hasSupabaseConfig()) throw new Error("Supabase env belum lengkap.");
+  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?select=id,data&order=updated_at.desc`, {
+    headers: supabaseHeaders(),
+  });
+  if (!response.ok) throw new Error(`Supabase admin read failed: ${response.status}`);
+  return response.json();
+}
+
 async function writeSupabaseDb(data, workspaceId) {
   if (!hasSupabaseConfig()) throw new Error("Supabase env belum lengkap.");
   const payload = [
@@ -428,6 +437,7 @@ module.exports = {
   parseBody,
   recordServerGenerateUsage,
   readSupabaseDb,
+  readSupabaseWorkspaces,
   sendJson,
   transcribeWithGemini,
   writeSupabaseDb,
