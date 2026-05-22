@@ -538,9 +538,13 @@ async function askAI({ topic, instruction, format }) {
 
 async function transcribeMedia(file) {
   const base64 = await fileToBase64(file);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90_000);
+
   const response = await fetch(`${API_BASE}/api/transcribe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: controller.signal,
     body: JSON.stringify({
       fileName: file.name,
       mimeType: file.type || "application/octet-stream",
@@ -548,7 +552,9 @@ async function transcribeMedia(file) {
       context: getAIContext(),
     }),
   }).catch(() => {
-    throw new Error(IS_LOCAL_APP ? "Server AI lokal belum aktif." : "API AI cloud gagal dihubungi.");
+    throw new Error(IS_LOCAL_APP ? "Server AI lokal belum aktif atau transkripsi terlalu lama." : "API AI cloud gagal dihubungi atau transkripsi terlalu lama.");
+  }).finally(() => {
+    clearTimeout(timeout);
   });
 
   const data = await response.json().catch(() => ({}));
@@ -731,6 +737,9 @@ function friendlyAIError(message) {
   }
   if (/fetch|ECONNREFUSED|Server AI lokal/i.test(text)) {
     return "Server AI lokal belum aktif. Jalankan start-ai-server.bat, lalu reload halaman.";
+  }
+  if (/abort|terlalu lama|timed out|timeout/i.test(text)) {
+    return "Transkripsi terlalu lama. Coba pakai potongan video/audio yang lebih pendek atau kompres file dulu.";
   }
   if (/API AI cloud|API AI gagal|server/i.test(text)) {
     return "API AI cloud gagal merespons. Coba ulangi sekali lagi. Kalau masih gagal, cek Environment Variables dan Function Logs di Vercel.";
@@ -1239,13 +1248,15 @@ $("#transcribeVideo").addEventListener("click", async (event) => {
   }
 
   setLoading(event.currentTarget, true);
+  $("#remixResult").value = "";
   $("#videoScript").value = "AI sedang mendengarkan percakapan dan mengubahnya menjadi text...";
   try {
     $("#videoScript").value = await transcribeMedia(file);
   } catch (error) {
     $("#videoScript").value = friendlyAIError(error.message);
+  } finally {
+    setLoading(event.currentTarget, false);
   }
-  setLoading(event.currentTarget, false);
 });
 
 $("#remixScript").addEventListener("click", async (event) => {
