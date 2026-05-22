@@ -199,6 +199,18 @@ function activeFunnelFor(topic) {
   };
 }
 
+function getScriptSettings() {
+  const type = $("#contentType")?.value || "Reels";
+  const duration = $("#contentDuration")?.value || "45";
+  const platform = $("#contentPlatform")?.value || "Instagram";
+  return { type, duration, platform };
+}
+
+function scriptSettingsPrompt() {
+  const settings = getScriptSettings();
+  return `Jenis konten: ${settings.type}\nDurasi target: ${settings.duration} detik\nPlatform: ${settings.platform}`;
+}
+
 function cleanIdea(topic) {
   return topic
     .replace(/\b(TOFU|MOFU|BOFU)\b/gi, "")
@@ -255,11 +267,11 @@ async function generateFullScript(topic, parts, draftTarget, trigger) {
   draft.textContent = "AI sedang membuat full script sekaligus...";
   try {
     const text = await askAI({
-      topic: cleanTopic,
+      topic: `${cleanTopic}\n\nSETTING SCRIPT\n${scriptSettingsPrompt()}`,
       instruction:
-        "Buat satu draft script lengkap untuk video pendek. Kamu berperan sebagai content director, copywriter, dan creator assistant. Script harus mengikuti blueprint brand aktif, target market, keresahan audiens, dan funnel bila topik memuat Awareness/Consideration/Conversion. Jangan memberi opsi, langsung buat draft terbaik.",
+        "Buat satu draft script lengkap. Kamu berperan sebagai content director, copywriter, dan creator assistant. Script harus mengikuti blueprint brand aktif, target market, keresahan audiens, jenis konten, durasi target, platform, dan funnel bila topik memuat Awareness/Consideration/Conversion. Jangan memberi opsi, langsung buat draft terbaik.",
       format:
-        "Format wajib persis dengan heading ini:\nHOOK\n...\n\nFORESHADOW\n...\n\nISI\n...\n\nCTA\n...\n\nGunakan Bahasa Indonesia yang natural, relate, bernilai, dan siap dipakai. Jangan tambahkan catatan di luar empat heading itu.",
+        "Format wajib persis dengan heading ini:\nHOOK\n...\n\nFORESHADOW\n...\n\nISI\n...\n\nCTA\n...\n\nSesuaikan panjang script dengan durasi target. Untuk Story buat lebih ringan dan direct. Untuk Carousel buat alur per slide. Untuk Feed buat caption/isi yang padat. Untuk Reels/TikTok/Shorts buat ritme video pendek. Gunakan Bahasa Indonesia yang natural, relate, bernilai, dan siap dipakai. Jangan tambahkan catatan di luar empat heading itu.",
     });
     const parsed = parseFullScript(text);
     parts.hook = parsed.hook || "-";
@@ -372,13 +384,13 @@ function formatInline(text) {
 function generationInstruction(part) {
   const map = {
     hook:
-      "Buat 5 pilihan hook untuk konten. Berikan variasi tipe hook: Question, Fact/Stats, Controversial, Storytelling, Comedy, Negative/Fear-based, How-to, atau Visual. Setiap opsi wajib punya TIPE, ANGLE, NASKAH, ARAH VISUAL, dan VALUE. Jangan generik. Jangan pakai pembuka/penutup di luar opsi.",
+      "Buat 5 pilihan hook untuk konten. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Berikan variasi tipe hook: Question, Fact/Stats, Controversial, Storytelling, Comedy, Negative/Fear-based, How-to, atau Visual. Setiap opsi wajib punya TIPE, ANGLE, NASKAH, ARAH VISUAL, dan VALUE. Jangan generik. Jangan pakai pembuka/penutup di luar opsi.",
     foreshadow:
-      "Buat 3 pilihan foreshadow/janji konten. Foreshadow harus membuat audiens punya alasan lanjut menonton. Setiap opsi wajib punya NASKAH, ARAH CERITA, dan VALUE. Jangan pakai pembuka/penutup di luar opsi.",
+      "Buat 3 pilihan foreshadow/janji konten. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Foreshadow harus membuat audiens punya alasan lanjut menonton/membaca. Setiap opsi wajib punya NASKAH, ARAH CERITA, dan VALUE. Jangan pakai pembuka/penutup di luar opsi.",
     body:
-      "Buat 3 pilihan isi konten pendek untuk video 45-90 detik. Isi harus menyampaikan value yang jelas, relate dengan keresahan audiens, dan tidak terdengar seperti teori teknis pembuatan konten. Setiap opsi wajib punya NASKAH, VALUE, dan ARAH VISUAL. Jangan pakai pembuka/penutup di luar opsi.",
+      "Buat 3 pilihan isi konten. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Isi harus menyampaikan value yang jelas, relate dengan keresahan audiens, dan tidak terdengar seperti teori teknis pembuatan konten. Untuk Carousel, buat per slide. Untuk Story, buat frame singkat. Untuk Feed, buat copy/caption padat. Setiap opsi wajib punya NASKAH, VALUE, dan ARAH VISUAL. Jangan pakai pembuka/penutup di luar opsi.",
     cta:
-      "Buat 3 pilihan CTA yang natural. Variasikan CTA untuk komentar, save/share, follow, konsultasi/chat, atau soft selling sesuai konteks. Setiap opsi wajib punya CTA dan TUJUAN. Jangan pakai pembuka/penutup di luar opsi.",
+      "Buat 3 pilihan CTA yang natural. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Variasikan CTA untuk komentar, save/share, follow, konsultasi/chat, atau soft selling sesuai konteks. Setiap opsi wajib punya CTA dan TUJUAN. Jangan pakai pembuka/penutup di luar opsi.",
   };
   return map[part];
 }
@@ -805,10 +817,10 @@ async function generateOptions(part, topic, container, parts, draftTarget, trigg
   let options = [];
   try {
     const text = await askAI({
-      topic: cleanTopic,
+      topic: `${cleanTopic}\n\nSETTING SCRIPT\n${scriptSettingsPrompt()}`,
       instruction: generationInstruction(part),
       format:
-        "WAJIB hanya keluarkan daftar opsi, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3: dan seterusnya.\n\nFormat per opsi:\nOPSI 1:\nTIPE/CTA: ...\nANGLE: ...\nNASKAH: \"...\"\nARAH VISUAL: ...\nVALUE/TUJUAN: ...\n\nBuat output dalam Bahasa Indonesia, spesifik untuk brand dan target market.",
+        "WAJIB hanya keluarkan daftar opsi, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3: dan seterusnya.\n\nFormat per opsi:\nOPSI 1:\nTIPE/CTA: ...\nFORMAT: jenis konten, durasi, platform\nANGLE: ...\nNASKAH: \"...\"\nARAH VISUAL: ...\nVALUE/TUJUAN: ...\n\nBuat output dalam Bahasa Indonesia, spesifik untuk brand, target market, jenis konten, durasi, dan platform.",
     });
     options = splitAIOptions(text);
   } catch (error) {
@@ -1268,6 +1280,14 @@ $("#resetVideoFile").addEventListener("click", () => {
   button.disabled = false;
   button.textContent = button.dataset.originalText || "Ambil Percakapan ke Text";
   showToast("Video ke Text direset.");
+});
+
+["contentType", "contentDuration", "contentPlatform"].forEach((id) => {
+  $(`#${id}`).addEventListener("change", () => {
+    state.scriptParts = {};
+    $("#scriptChoices").innerHTML = "";
+    $("#scriptDraft").textContent = "Belum ada script. Generate tiap bagian di atas.";
+  });
 });
 
 $("#remixScript").addEventListener("click", async (event) => {

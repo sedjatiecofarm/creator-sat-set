@@ -109,6 +109,33 @@
           </div>
         </div>
         <label class="wide-input">Ide konten / topik yang mau dibuat script<textarea id="scriptTopic" placeholder="Contoh: kenapa domba Garut yang terlihat besar belum tentu paling aman dipilih"></textarea></label>
+        <div class="script-settings">
+          <label>Jenis konten
+            <select id="contentType" class="select-input">
+              <option>Reels</option>
+              <option>Feed</option>
+              <option>Story</option>
+              <option>Carousel</option>
+            </select>
+          </label>
+          <label>Durasi
+            <select id="contentDuration" class="select-input">
+              <option value="20">20 detik</option>
+              <option value="30">30 detik</option>
+              <option value="45" selected>45 detik</option>
+              <option value="60">60 detik</option>
+            </select>
+          </label>
+          <label>Platform
+            <select id="contentPlatform" class="select-input">
+              <option>Instagram</option>
+              <option>TikTok</option>
+              <option>Facebook</option>
+              <option>YouTube Shorts</option>
+              <option>Threads</option>
+            </select>
+          </label>
+        </div>
         <div class="action-row">
           <button class="primary-btn" data-generate-full="script">Full Script</button>
           <button class="soft-btn" data-generate="hook">Hook</button>

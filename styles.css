@@ -326,6 +326,7 @@ label {
 
 textarea,
 .text-input,
+.select-input,
 .file-input,
 #ideaInput {
   width: 100%;
@@ -338,6 +339,11 @@ textarea,
   min-width: 0;
 }
 
+.select-input {
+  min-height: 48px;
+  appearance: none;
+}
+
 textarea {
   min-height: 96px;
   resize: vertical;
@@ -345,6 +351,7 @@ textarea {
 
 textarea:focus,
 .text-input:focus,
+.select-input:focus,
 #ideaInput:focus {
   border-color: var(--gold);
   background: #fff;
@@ -356,6 +363,13 @@ textarea:focus,
 
 .wide-input textarea {
   min-height: 130px;
+}
+
+.script-settings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .large-textarea {
@@ -833,6 +847,7 @@ pre {
   }
 
   .blueprint-grid,
+  .script-settings,
   .upload-blueprint,
   .action-row,
   .funnel-tabs,
@@ -945,6 +960,7 @@ pre {
   }
 
   .blueprint-grid,
+  .script-settings,
   .upload-blueprint,
   .action-row,
   .funnel-tabs,
