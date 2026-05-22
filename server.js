@@ -13,6 +13,7 @@ const providerOrder = (process.env.AI_PROVIDER_ORDER || provider)
   .split(",")
   .map((item) => item.trim().toLowerCase())
   .filter(Boolean);
+const fallbackEnabled = process.env.AI_FALLBACK !== "false";
 const openAIModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
@@ -385,7 +386,7 @@ async function handleTranscribe(req, res) {
 
 async function callWithFallback(prompt) {
   const attempts = [];
-  const chain = providerOrder.length ? providerOrder : ["gemini"];
+  const chain = buildProviderChain();
 
   for (const name of chain) {
     try {
@@ -413,6 +414,12 @@ async function callWithFallback(prompt) {
   }
 
   throw new Error(`Semua provider gagal. ${attempts.join(" | ")}`);
+}
+
+function buildProviderChain() {
+  const base = providerOrder.length ? providerOrder : [provider || "gemini"];
+  const fallback = fallbackEnabled ? ["gemini", "openrouter", "groq", "openai"] : [];
+  return [...new Set([...base, ...fallback].filter(Boolean))];
 }
 
 async function callOpenAI(prompt) {

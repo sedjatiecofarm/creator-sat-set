@@ -582,6 +582,9 @@ async function askAI({ topic, instruction, format }) {
     model: data.model,
     skipUsage: Boolean(data.usage),
   });
+  if (data.provider && data.provider !== "gemini") {
+    showToast(`AI fallback aktif: hasil dibuat via ${data.provider}.`);
+  }
   return data.text;
 }
 
@@ -876,8 +879,11 @@ function friendlyAIError(message) {
   if (/Limit generate harian/i.test(text)) {
     return text;
   }
+  if (/Semua provider gagal/i.test(text)) {
+    return "Semua provider AI gagal. Cek key Gemini, OpenRouter, dan Groq di Environment Variables Vercel, lalu redeploy.";
+  }
   if (/quota|rate limit|exceeded|Too Many Requests|429/i.test(text)) {
-    return "Limit gratis Gemini sedang habis untuk model ini. Tunggu beberapa saat sampai kuota reset, atau ganti model/provider. Agar lebih hemat, generate bagian yang benar-benar perlu saja.";
+    return "Limit AI sedang habis di provider utama. Sistem akan coba fallback ke OpenRouter/Groq kalau key-nya aktif. Kalau tetap gagal, cek Environment Variables provider fallback di Vercel.";
   }
   if (/API key not valid|API_KEY_INVALID|invalid api key/i.test(text)) {
     return "Gemini API key belum valid. Cek lagi GEMINI_API_KEY di file .env, lalu restart server.";
