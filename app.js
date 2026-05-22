@@ -1116,9 +1116,22 @@ function goHome() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function toggleSidebar(forceOpen = null) {
+  const shouldOpen = forceOpen ?? document.body.classList.contains("sidebar-collapsed");
+  document.body.classList.toggle("sidebar-collapsed", !shouldOpen);
+  $("#menuToggle").setAttribute("aria-label", shouldOpen ? "Tutup menu" : "Buka menu");
+}
+
+function initResponsiveSidebar() {
+  if (window.innerWidth <= 920) toggleSidebar(false);
+}
+
 $$("[data-home]").forEach((button) => {
   button.addEventListener("click", goHome);
 });
+
+$("#menuToggle").addEventListener("click", () => toggleSidebar(true));
+$("#sidebarClose").addEventListener("click", () => toggleSidebar(false));
 
 $$(".nav-item").forEach((item) => {
   item.addEventListener("click", () => {
@@ -1126,6 +1139,7 @@ $$(".nav-item").forEach((item) => {
     $$(".view").forEach((view) => view.classList.remove("active"));
     item.classList.add("active");
     $(`#${item.dataset.section}`).classList.add("active");
+    if (window.innerWidth <= 920) toggleSidebar(false);
   });
 });
 
@@ -1400,6 +1414,7 @@ async function loadWorkspaceState() {
 }
 
 async function initApp() {
+  initResponsiveSidebar();
   await initAuth();
   renderFunnelIdeas("tofu");
   await loadWorkspaceState();
