@@ -880,7 +880,9 @@ function friendlyAIError(message) {
     return text;
   }
   if (/Semua provider gagal/i.test(text)) {
-    return "Semua provider AI gagal. Cek key Gemini, OpenRouter, dan Groq di Environment Variables Vercel, lalu redeploy.";
+    return isAdminUser()
+      ? "Semua provider AI gagal. Cek key Gemini, OpenRouter, dan Groq di Environment Variables Vercel, lalu redeploy."
+      : "Maaf, saat ini AI belum bisa generate. Coba ulangi beberapa saat lagi.";
   }
   if (/quota|rate limit|exceeded|Too Many Requests|429/i.test(text)) {
     return "Limit AI sedang habis di provider utama. Sistem akan coba fallback ke OpenRouter/Groq kalau key-nya aktif. Kalau tetap gagal, cek Environment Variables provider fallback di Vercel.";
@@ -898,7 +900,9 @@ function friendlyAIError(message) {
     return "Transkripsi terlalu lama. Coba pakai potongan video/audio yang lebih pendek atau kompres file dulu.";
   }
   if (/API AI cloud|API AI gagal|server/i.test(text)) {
-    return "API AI cloud gagal merespons. Coba ulangi sekali lagi. Kalau masih gagal, cek Environment Variables dan Function Logs di Vercel.";
+    return isAdminUser()
+      ? "API AI cloud gagal merespons. Coba ulangi sekali lagi. Kalau masih gagal, cek Environment Variables dan Function Logs di Vercel."
+      : "Maaf, saat ini AI belum bisa merespons. Coba ulangi beberapa saat lagi.";
   }
   return text;
 }
