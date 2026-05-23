@@ -53,6 +53,16 @@ function getRequester(body) {
   };
 }
 
+function requireLoggedInUser(body) {
+  const requester = getRequester(body || {});
+  if (!requester.id || !requester.email) {
+    const error = new Error("Login Google diperlukan untuk menggunakan AI.");
+    error.statusCode = 401;
+    throw error;
+  }
+  return requester;
+}
+
 function limitError(limit, used) {
   const error = new Error(`Limit generate harian kamu sudah habis (${used}/${limit}). Coba lagi besok, atau gunakan akun admin.`);
   error.statusCode = 429;
@@ -60,7 +70,7 @@ function limitError(limit, used) {
 }
 
 async function enforceDailyGenerateLimit(body) {
-  const requester = getRequester(body || {});
+  const requester = requireLoggedInUser(body || {});
   if (requester.isAdmin) return { requester, usage: null, day: todayKey(), skipped: true };
 
   const workspaceId = requester.workspaceId || resolveStateId(body?.workspaceId);
