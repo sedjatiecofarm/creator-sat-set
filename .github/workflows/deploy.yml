@@ -1,0 +1,90 @@
+name: 🚀 Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main-v2
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 72.61.213.120 >> ~/.ssh/known_hosts
+
+      - name: 🚀 Deploy ke VPS
+        run: |
+          ssh root@72.61.213.120 << 'ENDSSH'
+            set -e
+
+            APP_DIR="/opt/creatorss"
+            REPO_URL="https://github.com/sedjatiecofarm/creator-sat-set.git"
+
+            echo "======================================"
+            echo " Creator SAT SET - Deploy"
+            echo "======================================"
+
+            # Install dependencies dasar jika belum ada
+            export DEBIAN_FRONTEND=noninteractive
+            if ! command -v git &> /dev/null || ! command -v curl &> /dev/null; then
+              echo "📦 Installing git & curl..."
+              apt-get update -qq && apt-get install -y -qq git curl
+              echo "✅ git & curl installed"
+            fi
+
+            # Install Docker jika belum ada
+            if ! command -v docker &> /dev/null; then
+              echo "📦 Installing Docker..."
+              curl -fsSL https://get.docker.com | sh
+              systemctl enable docker
+              systemctl start docker
+              echo "✅ Docker installed"
+            fi
+
+            # Clone jika belum ada, atau pull jika sudah ada
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "📥 Cloning repository..."
+              git clone $REPO_URL $APP_DIR
+              echo "✅ Repository cloned"
+            else
+              echo "🔄 Pulling latest code..."
+              cd $APP_DIR
+              git fetch origin
+              git reset --hard origin/main-v2
+              echo "✅ Code updated"
+            fi
+
+            cd $APP_DIR
+
+            # Pastikan .env ada (harus dibuat manual di VPS)
+            if [ ! -f ".env" ]; then
+              echo "⚠️  File .env belum ada!"
+              echo "   Buat file /opt/creatorss/.env terlebih dahulu"
+              echo "   Contoh isinya ada di .env.example"
+              exit 1
+            fi
+
+            echo "🐳 Building & starting Docker containers..."
+            docker compose pull --ignore-pull-failures || true
+            docker compose up --build -d
+
+            echo "🧹 Cleaning up old Docker images..."
+            docker image prune -f
+
+            echo ""
+            echo "✅ Deploy selesai!"
+            echo "🌐 App berjalan di https://creator.crsdigi.tech"
+          ENDSSH
+
+      - name: ✅ Deploy sukses
+        run: echo "🎉 Deploy ke VPS berhasil!"

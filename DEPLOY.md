@@ -46,16 +46,15 @@ Aplikasi sekarang memakai Prisma dan database SQL PostgreSQL. Supabase tidak lag
 DATABASE_URL=postgresql://creator:creator_password@db:5432/creator_sat_set?schema=public
 APP_STATE_ID=creator-sat-set
 PORT=8787
-AI_PROVIDER=gemini
-AI_PROVIDER_ORDER=gemini,openrouter,groq
-GEMINI_API_KEY=...
-GEMINI_MODEL=gemini-2.5-flash
-OPENAI_API_KEY=...
-OPENAI_MODEL=gpt-4.1-mini
-OPENROUTER_API_KEY=...
-OPENROUTER_MODELS=...
-GROQ_API_KEY=...
-GROQ_MODEL=llama-3.3-70b-versatile
+LOGIN_PIN=123456
+PIN_SESSION_SECRET=ubah-ke-random-secret-panjang
+PIN_SESSION_TTL_MS=604800000
+AI_PROVIDER=9router
+AI_PROVIDER_ORDER=9router
+AI_FALLBACK=false
+NINE_ROUTER_API_KEY=...
+NINE_ROUTER_MODEL=content-ai
+NINE_ROUTER_ENDPOINT=https://9router.crsdigi.tech/v1
 ```
 
 ## Data

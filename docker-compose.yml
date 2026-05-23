@@ -1,22 +1,21 @@
 services:
   app:
     build: .
-    ports:
-      - "8787:8787"
+    expose:
+      - "8787"
     environment:
       PORT: 8787
       DATABASE_URL: postgresql://creator:creator_password@db:5432/creator_sat_set?schema=public
       APP_STATE_ID: creator-sat-set
-      AI_PROVIDER: ${AI_PROVIDER:-gemini}
-      AI_PROVIDER_ORDER: ${AI_PROVIDER_ORDER:-gemini}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      LOGIN_PIN: ${LOGIN_PIN:-123456}
+      PIN_SESSION_SECRET: ${PIN_SESSION_SECRET:-change-this-long-random-secret}
+      PIN_SESSION_TTL_MS: ${PIN_SESSION_TTL_MS:-604800000}
+      AI_PROVIDER: ${AI_PROVIDER:-9router}
+      AI_PROVIDER_ORDER: ${AI_PROVIDER_ORDER:-9router}
+      AI_FALLBACK: ${AI_FALLBACK:-false}
+      NINE_ROUTER_API_KEY: ${NINE_ROUTER_API_KEY:-}
+      NINE_ROUTER_MODEL: ${NINE_ROUTER_MODEL:-content-ai}
+      NINE_ROUTER_ENDPOINT: ${NINE_ROUTER_ENDPOINT:-https://9router.crsdigi.tech/v1}
     depends_on:
       db:
         condition: service_healthy
@@ -27,8 +26,6 @@ services:
       POSTGRES_USER: creator
       POSTGRES_PASSWORD: creator_password
       POSTGRES_DB: creator_sat_set
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -37,5 +34,21 @@ services:
       timeout: 5s
       retries: 10
 
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
 volumes:
   postgres-data:
+  caddy-data:
+  caddy-config:

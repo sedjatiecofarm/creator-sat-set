@@ -1,10 +1,9 @@
 <template>
   <aside class="sidebar">
     <button class="brand home-link" type="button" @click="$emit('home')">
-      <span class="brand-mark ny-mark"><i>Y</i><i>N</i></span>
+      <span class="brand-mark">◆</span>
       <div>
-        <strong>Konten</strong>
-        <strong>Generator</strong>
+        <strong>CreatorSpine</strong>
       </div>
     </button>
 
@@ -22,19 +21,23 @@
     </nav>
 
     <div class="account">
-      <div class="avatar ny-mark"><i>Y</i><i>N</i></div>
+      <div class="avatar">YN</div>
       <div>
         <strong>{{ accountName }}</strong>
         <span>{{ accountEmail }}</span>
       </div>
     </div>
 
-    <div class="auth-actions">
-      <button v-if="!hasUser" class="auth-btn" type="button" :disabled="!authReady" @click="$emit('login')">
+    <div class="auth-actions" v-if="!hasUser">
+      <button class="auth-btn" type="button" :disabled="!authReady" @click="$emit('login')">
         {{ authReady ? "Mode SQL" : "Database belum siap" }}
       </button>
-      <button v-else class="auth-btn muted-btn" type="button" @click="$emit('logout')">Logout</button>
     </div>
+
+    <button v-else class="sidebar-logout" type="button" @click="$emit('logout')">
+      <span>↪</span>
+      Log Out
+    </button>
   </aside>
 </template>
 

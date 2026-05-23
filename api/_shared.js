@@ -1,15 +1,7 @@
-const provider = (process.env.AI_PROVIDER || "gemini").toLowerCase();
-const providerOrder = (process.env.AI_PROVIDER_ORDER || provider)
-  .split(",")
-  .map((item) => item.trim().toLowerCase())
-  .filter(Boolean);
-const openAIModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
-const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
-const openRouterModels = (process.env.OPENROUTER_MODELS || "")
-  .split(",")
-  .map((item) => item.trim())
-  .filter(Boolean);
+const provider = (process.env.AI_PROVIDER || "9router").toLowerCase();
+const nineRouterApiKey = process.env.NINE_ROUTER_API_KEY || process.env.ROUTER9_API_KEY || process.env.AI_API_KEY || "";
+const nineRouterModel = process.env.NINE_ROUTER_MODEL || "content-ai";
+const nineRouterEndpoint = (process.env.NINE_ROUTER_ENDPOINT || "https://9router.crsdigi.tech/v1").replace(/\/+$/, "");
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -45,6 +37,7 @@ KONTEKS BRAND
 - Keresahan audiens: ${context.painPoint || "belum diisi"}
 - Gaya komunikasi: ${context.brandTone || "belum diisi"}
 - Tujuan konten: ${context.contentGoal || "belum diisi"}
+- Brand DNA aktif: ${context.brandDna || "belum ada brand DNA aktif"}
 
 TUGAS
 ${body.instruction || ""}
@@ -62,235 +55,54 @@ function systemInstruction() {
 }
 
 async function callWithFallback(prompt) {
-  const attempts = [];
-  const chain = providerOrder.length ? providerOrder : ["gemini"];
-
-  for (const name of chain) {
-    try {
-      if (name === "gemini") {
-        if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY belum diset.");
-        return { text: await callGemini(prompt), provider: "gemini", model: geminiModel };
-      }
-      if (name === "openrouter") {
-        if (!process.env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY belum diset.");
-        const result = await callOpenRouter(prompt);
-        return { text: result.text, provider: "openrouter", model: result.model };
-      }
-      if (name === "groq") {
-        if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY belum diset.");
-        return { text: await callGroq(prompt), provider: "groq", model: groqModel };
-      }
-      if (name === "openai") {
-        if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY belum diset.");
-        return { text: await callOpenAI(prompt), provider: "openai", model: openAIModel };
-      }
-      throw new Error(`Provider ${name} belum didukung.`);
-    } catch (error) {
-      attempts.push(`${name}: ${error.message}`);
-    }
+  if (provider !== "9router") {
+    throw new Error("Provider lama sudah dinonaktifkan. Set AI_PROVIDER=9router.");
   }
-
-  throw new Error(`Semua provider gagal. ${attempts.join(" | ")}`);
+  if (!nineRouterApiKey) throw new Error("NINE_ROUTER_API_KEY belum diset.");
+  return { text: await callNineRouter(prompt), provider: "9router", model: nineRouterModel };
 }
 
-async function callOpenAI(prompt) {
-  const response = await fetch("https://api.openai.com/v1/responses", {
+async function callNineRouter(prompt) {
+  const response = await fetch(`${nineRouterEndpoint}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${nineRouterApiKey}`,
     },
     body: JSON.stringify({
-      model: openAIModel,
-      instructions: systemInstruction(),
-      input: prompt,
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Gagal memanggil OpenAI API.");
-  return extractOpenAIText(data);
-}
-
-async function callGemini(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction() }] },
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.8 },
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Gagal memanggil Gemini API.");
-  return extractGeminiText(data);
-}
-
-async function callOpenRouter(prompt) {
-  const models = openRouterModels.length ? openRouterModels : await getOpenRouterFreeModels();
-  if (!models.length) throw new Error("Tidak ada model OpenRouter free yang tersedia. Isi OPENROUTER_MODELS di env.");
-
-  const errors = [];
-  for (const model of models) {
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "HTTP-Referer": "https://creator-sat-set.vercel.app",
-          "X-Title": "Creator Sat Set",
-        },
-        body: JSON.stringify({
-          model,
-          temperature: 0.8,
-          messages: [
-            { role: "system", content: systemInstruction() },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || `OpenRouter gagal untuk model ${model}.`);
-      return { text: extractChatText(data), model };
-    } catch (error) {
-      errors.push(`${model}: ${error.message}`);
-    }
-  }
-  throw new Error(`OpenRouter gagal di semua model. ${errors.join(" | ")}`);
-}
-
-async function getOpenRouterFreeModels() {
-  const response = await fetch("https://openrouter.ai/api/v1/models");
-  const data = await response.json();
-  if (!response.ok) return [];
-  const preferred = ["qwen", "deepseek", "gemma"];
-  return (data.data || [])
-    .filter((model) => {
-      const id = String(model.id || "").toLowerCase();
-      const promptPrice = Number(model.pricing?.prompt || 1);
-      const completionPrice = Number(model.pricing?.completion || 1);
-      return preferred.some((name) => id.includes(name)) && promptPrice === 0 && completionPrice === 0;
-    })
-    .sort((a, b) => {
-      const aId = String(a.id || "").toLowerCase();
-      const bId = String(b.id || "").toLowerCase();
-      return preferred.findIndex((name) => aId.includes(name)) - preferred.findIndex((name) => bId.includes(name));
-    })
-    .slice(0, 6)
-    .map((model) => model.id);
-}
-
-async function callGroq(prompt) {
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: groqModel,
-      temperature: 0.8,
+      model: nineRouterModel,
       messages: [
         { role: "system", content: systemInstruction() },
         { role: "user", content: prompt },
       ],
+      temperature: 0.8,
     }),
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Gagal memanggil Groq API.");
+
+  const data = await parseNineRouterResponse(response);
+  if (!response.ok) throw new Error(data.error?.message || data.message || "Gagal memanggil 9router API.");
   return extractChatText(data);
 }
 
-async function transcribeWithGemini(body) {
-  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY belum diset.");
-  if (!body.dataBase64 || !body.mimeType) throw new Error("File video/audio belum valid.");
-
-  const context = body.context || {};
-  const prompt = `
-TUGAS
-Transkrip percakapan/caption dari file video atau audio ini ke Bahasa Indonesia sejelas mungkin.
-
-KONTEKS BRAND UNTUK CATATAN REMIX
-- Brand/kreator: ${context.brandName || "belum diisi"}
-- Niche/penawaran: ${context.mainOffer || "belum diisi"}
-- Target market: ${context.audience || "belum diisi"}
-- Gaya komunikasi: ${context.brandTone || "belum diisi"}
-
-ATURAN
-- Fokus ambil kata-kata yang terdengar di audio.
-- Kalau ada bagian tidak jelas, tulis [tidak jelas].
-- Jangan mengarang percakapan yang tidak terdengar.
-- Setelah transkrip, beri ringkasan pola konten agar bisa diremix.
-
-FORMAT OUTPUT
-TRANSKRIP
-...
-
-POLA KONTEN
-- Hook:
-- Alur isi:
-- CTA:
-- Catatan gaya:
-`.trim();
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: body.mimeType,
-                data: body.dataBase64,
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: { temperature: 0.2 },
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Gagal mentranskrip file dengan Gemini.");
-  return extractGeminiText(data);
+async function transcribeWithNineRouter() {
+  throw new Error("Transkripsi video/audio belum didukung oleh provider 9router model content-ai.");
 }
 
-function extractOpenAIText(data) {
-  if (data.output_text) return data.output_text.trim();
-  const chunks = [];
-  for (const item of data.output || []) {
-    for (const content of item.content || []) {
-      if (content.text) chunks.push(content.text);
-    }
+async function parseNineRouterResponse(response) {
+  const raw = await response.text();
+  const jsonText = raw.replace(/\ndata:\s*\[DONE\]\s*$/i, "").trim();
+  if (!jsonText) return {};
+  try {
+    return JSON.parse(jsonText);
+  } catch (error) {
+    const firstJson = jsonText.match(/\{[\s\S]*\}/)?.[0];
+    return firstJson ? JSON.parse(firstJson) : {};
   }
-  return chunks.join("\n").trim();
-}
-
-function extractGeminiText(data) {
-  const chunks = [];
-  for (const candidate of data.candidates || []) {
-    for (const part of candidate.content?.parts || []) {
-      if (part.text) chunks.push(part.text);
-    }
-  }
-  const text = chunks.join("\n").trim();
-  if (!text) throw new Error("Gemini tidak mengembalikan teks. Coba ulangi request.");
-  return text;
 }
 
 function extractChatText(data) {
   const text = data.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error("Provider tidak mengembalikan teks. Coba ulangi request.");
+  if (!text) throw new Error("9router tidak mengembalikan teks. Coba ulangi request.");
   return text;
 }
 
@@ -299,5 +111,5 @@ module.exports = {
   callWithFallback,
   parseBody,
   sendJson,
-  transcribeWithGemini,
+  transcribeWithNineRouter,
 };
