@@ -6,23 +6,10 @@ const providerOrder = (process.env.AI_PROVIDER_ORDER || provider)
 const openAIModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
-const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const supabaseTable = process.env.SUPABASE_TABLE || "creator_app_state";
-const supabaseStateId = process.env.SUPABASE_STATE_ID || "creator-sat-set";
 const openRouterModels = (process.env.OPENROUTER_MODELS || "")
   .split(",")
   .map((item) => item.trim())
   .filter(Boolean);
-
-function defaultDb() {
-  return {
-    plans: {},
-    blueprints: [],
-    activeBlueprintId: null,
-    updatedAt: null,
-  };
-}
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -307,57 +294,10 @@ function extractChatText(data) {
   return text;
 }
 
-function hasSupabaseConfig() {
-  return Boolean(supabaseUrl && supabaseKey);
-}
-
-function supabaseHeaders(extra = {}) {
-  return {
-    apikey: supabaseKey,
-    Authorization: `Bearer ${supabaseKey}`,
-    "Content-Type": "application/json",
-    ...extra,
-  };
-}
-
-function resolveStateId(workspaceId) {
-  const cleanId = String(workspaceId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
-  return cleanId || supabaseStateId;
-}
-
-async function readSupabaseDb(workspaceId) {
-  if (!hasSupabaseConfig()) return defaultDb();
-  const url = `${supabaseUrl}/rest/v1/${supabaseTable}?id=eq.${encodeURIComponent(resolveStateId(workspaceId))}&select=data`;
-  const response = await fetch(url, { headers: supabaseHeaders() });
-  if (!response.ok) throw new Error(`Supabase read failed: ${response.status}`);
-  const rows = await response.json();
-  const data = rows?.[0]?.data;
-  return data ? { ...defaultDb(), ...data } : defaultDb();
-}
-
-async function writeSupabaseDb(data, workspaceId) {
-  if (!hasSupabaseConfig()) throw new Error("Supabase env belum lengkap.");
-  const payload = [
-    {
-      id: resolveStateId(workspaceId),
-      data: { ...defaultDb(), ...data, updatedAt: new Date().toISOString() },
-    },
-  ];
-  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?on_conflict=id`, {
-    method: "POST",
-    headers: supabaseHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }),
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) throw new Error(`Supabase write failed: ${response.status}`);
-}
-
 module.exports = {
   buildPrompt,
   callWithFallback,
-  defaultDb,
   parseBody,
-  readSupabaseDb,
   sendJson,
   transcribeWithGemini,
-  writeSupabaseDb,
 };

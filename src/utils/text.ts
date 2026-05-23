@@ -1,4 +1,4 @@
-export function escapeHtml(value) {
+export function escapeHtml(value: unknown): string {
   return String(value || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -7,15 +7,15 @@ export function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-export function formatInline(text) {
+export function formatInline(text: string): string {
   return escapeHtml(text)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/`(.+?)`/g, "<code>$1</code>");
 }
 
-export function renderAIText(text) {
+export function renderAIText(text: unknown): string {
   const lines = String(text || "").replace(/\r/g, "").split("\n");
-  const html = [];
+  const html: string[] = [];
   let listOpen = false;
   const closeList = () => {
     if (listOpen) {
@@ -64,7 +64,7 @@ export function renderAIText(text) {
   return html.join("");
 }
 
-export function splitAIOptions(text) {
+export function splitAIOptions(text: unknown): string[] {
   const cleaned = String(text || "")
     .trim()
     .replace(/\r/g, "")
@@ -80,7 +80,7 @@ export function splitAIOptions(text) {
   return [normalizeOptionText(cleaned)];
 }
 
-export function normalizeOptionText(text) {
+export function normalizeOptionText(text: unknown): string {
   return String(text || "")
     .replace(/^\s*---+\s*/g, "")
     .replace(/\*\*/g, "")
@@ -88,7 +88,7 @@ export function normalizeOptionText(text) {
     .trim();
 }
 
-export function scriptLine(text) {
+export function scriptLine(text: unknown): string {
   const value = String(text || "");
   const match = value.match(/NASKAH:\s*"([^"]+)"/s);
   if (match) return match[1].trim();

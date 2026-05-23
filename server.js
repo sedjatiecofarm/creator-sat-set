@@ -1,11 +1,10 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const { defaultDb, readDb, writeDb } = require("./api/stateDb");
 
 const root = __dirname;
 const publicRoot = fs.existsSync(path.join(root, "dist")) ? path.join(root, "dist") : root;
-const dataDir = path.join(root, "data");
-const dbPath = path.join(dataDir, "creator-db.json");
 loadEnvFile();
 
 const port = Number(process.env.PORT || 8787);
@@ -17,10 +16,6 @@ const providerOrder = (process.env.AI_PROVIDER_ORDER || provider)
 const openAIModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
-const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const supabaseTable = process.env.SUPABASE_TABLE || "creator_app_state";
-const supabaseStateId = process.env.SUPABASE_STATE_ID || "creator-sat-set";
 const openRouterModels = (process.env.OPENROUTER_MODELS || "")
   .split(",")
   .map((item) => item.trim())
@@ -55,15 +50,16 @@ const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url || "/", "http://localhost");
 
   if (requestUrl.pathname === "/api/config" && req.method === "GET") {
-    sendJson(res, 200, {
-      supabaseUrl,
-      supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "",
-    });
+    sendJson(res, 200, { authProvider: "none" });
     return;
   }
 
   if (requestUrl.pathname === "/api/db" && req.method === "GET") {
-    sendJson(res, 200, await readDb(requestUrl.searchParams.get("workspaceId")));
+    try {
+      sendJson(res, 200, await readDb(requestUrl.searchParams.get("workspaceId")));
+    } catch (error) {
+      sendJson(res, 200, defaultDb());
+    }
     return;
   }
 
@@ -101,49 +97,6 @@ function sendJson(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
-function defaultDb() {
-  return {
-    plans: {},
-    blueprints: [],
-    activeBlueprintId: null,
-    updatedAt: null,
-  };
-}
-
-async function readDb(workspaceId) {
-  const cloudDb = await readSupabaseDb(workspaceId);
-  if (cloudDb) return cloudDb;
-
-  try {
-    if (!fs.existsSync(dbPath)) return defaultDb();
-    const stored = JSON.parse(fs.readFileSync(dbPath, "utf8"));
-    if (stored.workspaces) {
-      return { ...defaultDb(), ...(stored.workspaces[resolveStateId(workspaceId)] || {}) };
-    }
-    return { ...defaultDb(), ...stored };
-  } catch (error) {
-    return defaultDb();
-  }
-}
-
-async function writeDb(data, workspaceId) {
-  const savedToSupabase = await writeSupabaseDb(data, workspaceId);
-  if (savedToSupabase) return;
-
-  fs.mkdirSync(dataDir, { recursive: true });
-  let stored = { workspaces: {} };
-  if (fs.existsSync(dbPath)) {
-    try {
-      const existing = JSON.parse(fs.readFileSync(dbPath, "utf8"));
-      stored = existing.workspaces ? existing : { workspaces: { [supabaseStateId]: existing } };
-    } catch (error) {
-      stored = { workspaces: {} };
-    }
-  }
-  stored.workspaces[resolveStateId(workspaceId)] = { ...defaultDb(), ...data, updatedAt: new Date().toISOString() };
-  fs.writeFileSync(dbPath, JSON.stringify(stored, null, 2));
-}
-
 async function handleSaveDb(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
@@ -156,70 +109,8 @@ async function handleSaveDb(req, res) {
     }, workspaceId);
     sendJson(res, 200, { ok: true });
   } catch (error) {
-    sendJson(res, 500, { error: error.message || "Gagal menyimpan database lokal." });
+    sendJson(res, 500, { error: error.message || "Gagal menyimpan database." });
   }
-}
-
-function hasSupabaseConfig() {
-  return Boolean(supabaseUrl && supabaseKey);
-}
-
-function supabaseHeaders(extra = {}) {
-  return {
-    apikey: supabaseKey,
-    Authorization: `Bearer ${supabaseKey}`,
-    "Content-Type": "application/json",
-    ...extra,
-  };
-}
-
-function resolveStateId(workspaceId) {
-  const cleanId = String(workspaceId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
-  return cleanId || supabaseStateId;
-}
-
-async function readSupabaseDb(workspaceId) {
-  if (!hasSupabaseConfig()) return null;
-
-  const url = `${supabaseUrl}/rest/v1/${supabaseTable}?id=eq.${encodeURIComponent(resolveStateId(workspaceId))}&select=data`;
-  const response = await fetch(url, {
-    headers: supabaseHeaders(),
-  });
-
-  if (!response.ok) {
-    console.warn(`Supabase read failed: ${response.status}`);
-    return null;
-  }
-
-  const rows = await response.json();
-  const data = rows?.[0]?.data;
-  return data ? { ...defaultDb(), ...data } : defaultDb();
-}
-
-async function writeSupabaseDb(data, workspaceId) {
-  if (!hasSupabaseConfig()) return false;
-
-  const payload = [
-    {
-      id: resolveStateId(workspaceId),
-      data: { ...defaultDb(), ...data, updatedAt: new Date().toISOString() },
-    },
-  ];
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?on_conflict=id`, {
-    method: "POST",
-    headers: supabaseHeaders({
-      Prefer: "resolution=merge-duplicates,return=minimal",
-    }),
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    console.warn(`Supabase write failed: ${response.status}`);
-    return false;
-  }
-
-  return true;
 }
 
 function readBody(req) {

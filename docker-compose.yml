@@ -1,0 +1,41 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      PORT: 8787
+      DATABASE_URL: postgresql://creator:creator_password@db:5432/creator_sat_set?schema=public
+      APP_STATE_ID: creator-sat-set
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      AI_PROVIDER_ORDER: ${AI_PROVIDER_ORDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: creator
+      POSTGRES_PASSWORD: creator_password
+      POSTGRES_DB: creator_sat_set
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U creator -d creator_sat_set"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

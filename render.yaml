@@ -1,22 +1,20 @@
 services:
   - type: web
     name: creator-sat-set
-    env: node
+    env: docker
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: node server.js
     envVars:
       - key: PORT
         value: 8787
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_STATE_ID
+        value: creator-sat-set
       - key: AI_PROVIDER
         value: gemini
       - key: AI_PROVIDER_ORDER
         value: gemini,openrouter,groq
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash-lite
+        value: gemini-2.5-flash
       - key: GROQ_MODEL
         value: llama-3.3-70b-versatile
-      - key: SUPABASE_TABLE
-        value: creator_app_state
-      - key: SUPABASE_STATE_ID
-        value: creator-sat-set

@@ -138,7 +138,7 @@
           <p class="muted">Maksimal file video/audio: 4 MB.</p>
         </div>
       </div>
-      <input class="file-input" type="file" accept="video/*,audio/*" @change="videoFile = $event.target.files[0] || null" />
+      <input class="file-input" type="file" accept="video/*,audio/*" @change="setVideoFile" />
       <button class="primary-btn" type="button" :disabled="loading.transcribe" @click="transcribeVideo">Ambil Percakapan ke Text</button>
       <textarea class="large-textarea" v-model="videoScript" placeholder="Transkrip percakapan/caption dari video akan muncul di sini."></textarea>
       <button class="ghost-btn copy-inline" type="button" @click="copyText(videoScript)">Salin Text</button>
@@ -254,15 +254,16 @@
   <div class="toast" :class="{ show: toast }">{{ toast }}</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref } from "vue";
 import AppSidebar from "./components/AppSidebar.vue";
 import { emptyBlueprintHtml, funnelMeta, generationInstruction, monthNames, partLabels } from "./data/content";
-import { fetchConfig, generateContent, isLocalApp, loadDb, saveDb, transcribeContent } from "./services/api";
+import { generateContent, isLocalApp, loadDb, saveDb, transcribeContent } from "./services/api";
+import type { AskAIPayload, BlueprintProfile, BrandContext, CalendarDay, ChatMessage, FunnelStage, NavItem, NavView, PlanItem, PlanRow, ScriptChoice, ScriptPart } from "./types";
 import { storage } from "./utils/storage";
 import { escapeHtml, renderAIText, scriptLine, splitAIOptions } from "./utils/text";
 
-const navItems = [
+const navItems: NavItem[] = [
   { id: "blueprint", label: "Blueprint", icon: "□" },
   { id: "ideation", label: "Cari Ide", icon: "?" },
   { id: "script", label: "Bikin Script", icon: "✎" },
@@ -270,29 +271,29 @@ const navItems = [
   { id: "funnel", label: "Konten Express", icon: "↗" },
   { id: "plan", label: "Kalendar Konten", icon: "▦" },
 ];
-const scriptParts = ["hook", "foreshadow", "body", "cta"];
+const scriptParts: ScriptPart[] = ["hook", "foreshadow", "body", "cta"];
 const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
-const activeView = ref("blueprint");
+const activeView = ref<NavView>("blueprint");
 const toast = ref("");
-const chatBox = ref(null);
+const chatBox = ref<HTMLElement | null>(null);
 const ideaInput = ref("");
 const scriptTopic = ref("");
-const videoFile = ref(null);
+const videoFile = ref<File | null>(null);
 const videoScript = ref("");
 const remixTopic = ref("");
 const remixResult = ref("");
 const blueprintResult = ref(emptyBlueprintHtml);
 const planTitle = ref("");
 const planScript = ref("");
-const selectedScriptChoice = ref(null);
-const selectedFunnelChoice = ref(null);
-const scriptChoices = ref([]);
-const funnelChoices = ref([]);
-const funnelIdeas = ref([]);
+const selectedScriptChoice = ref<number | null>(null);
+const selectedFunnelChoice = ref<number | null>(null);
+const scriptChoices = ref<ScriptChoice[]>([]);
+const funnelChoices = ref<ScriptChoice[]>([]);
+const funnelIdeas = ref<string[]>([]);
 const funnelError = ref("");
 
-const brand = reactive({
+const brand = reactive<BrandContext>({
   brandName: "",
   mainOffer: "",
   audience: "",
@@ -302,21 +303,21 @@ const brand = reactive({
 });
 
 const auth = reactive({
-  client: null,
-  user: null,
+  client: null as null,
+  user: null as null,
   ready: false,
 });
 
 const state = reactive({
-  scriptParts: {},
-  funnelParts: {},
+  scriptParts: {} as Partial<Record<ScriptPart, string>>,
+  funnelParts: {} as Partial<Record<ScriptPart, string>>,
   funnelTopic: "",
-  currentFunnel: "tofu",
-  selectedDate: null,
+  currentFunnel: "tofu" as FunnelStage,
+  selectedDate: null as string | null,
   calendarDate: new Date(2026, 4, 20),
-  plans: storage.read("creatorPlans", "{}"),
-  blueprints: storage.read("creatorBlueprints", "[]"),
-  activeBlueprintId: storage.read("activeBlueprintId", "null"),
+  plans: storage.read<Record<string, PlanItem>>("creatorPlans", "{}"),
+  blueprints: storage.read<BlueprintProfile[]>("creatorBlueprints", "[]"),
+  activeBlueprintId: storage.read<string | null>("activeBlueprintId", "null"),
   lastBlueprintResult: "",
 });
 
@@ -331,7 +332,7 @@ const loading = reactive({
   remix: false,
 });
 
-const chatMessages = ref([
+const chatMessages = ref<ChatMessage[]>([
   {
     id: crypto.randomUUID(),
     role: "assistant",
@@ -342,13 +343,13 @@ const chatMessages = ref([
 const WORKSPACE_ID = getWorkspaceId();
 
 const activeFunnel = computed(() => funnelMeta[state.currentFunnel]);
-const accountName = computed(() => auth.user?.user_metadata?.full_name || auth.user?.email?.split("@")[0] || "Digital Creative");
+const accountName = computed(() => "Digital Creative");
 const accountEmail = computed(() => {
-  if (!auth.ready) return "Mode device lokal";
-  return auth.user?.email || "Data tersimpan di device ini";
+  if (!auth.ready) return "Menyiapkan database";
+  return "Data tersimpan di SQL database";
 });
 const activePageTitle = computed(() => navItems.find((item) => item.id === activeView.value)?.label || "Workspace");
-const workspaceStatus = computed(() => (auth.user ? "Cloud sync aktif" : workspaceReady.value ? "Device sync aktif" : "Mode lokal"));
+const workspaceStatus = computed(() => (workspaceReady.value ? "SQL sync aktif" : "Mode lokal"));
 const monthLabel = computed(() => `${monthNames[state.calendarDate.getMonth()]} ${state.calendarDate.getFullYear()}`);
 const calendarBlanks = computed(() => Array.from({ length: new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth(), 1).getDay() }, (_, index) => index));
 const calendarDays = computed(() => {
@@ -370,40 +371,41 @@ const scriptDraft = computed(() => draftFromParts(state.scriptParts));
 const funnelDraft = computed(() => draftFromParts(state.funnelParts));
 const blueprintPlainText = computed(() => blueprintResult.value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
 
-function showToast(message) {
+let toastTimer: number | undefined;
+function showToast(message: string) {
   toast.value = message;
-  window.clearTimeout(showToast.timer);
-  showToast.timer = window.setTimeout(() => {
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
     toast.value = "";
   }, 1800);
 }
 
-function getWorkspaceId() {
+function getWorkspaceId(): string {
   const param = new URLSearchParams(window.location.search).get("workspace");
   if (param) {
     const cleanParam = cleanWorkspaceId(param);
     storage.write("creatorWorkspaceId", cleanParam);
     return cleanParam;
   }
-  const existing = cleanWorkspaceId(storage.read("creatorWorkspaceId", "null"));
+  const existing = cleanWorkspaceId(storage.read<string | null>("creatorWorkspaceId", "null"));
   if (existing) return existing;
   const next = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   storage.write("creatorWorkspaceId", next);
   return next;
 }
 
-function cleanWorkspaceId(value) {
+function cleanWorkspaceId(value: unknown): string {
   return String(value || "")
     .replace(/^"+|"+$/g, "")
     .replace(/[^a-zA-Z0-9_-]/g, "")
     .slice(0, 80);
 }
 
-function getActiveWorkspaceId() {
-  return auth.user?.id ? `user-${auth.user.id}` : WORKSPACE_ID;
+function getActiveWorkspaceId(): string {
+  return WORKSPACE_ID;
 }
 
-function getBrandContext() {
+function getBrandContext(): BrandContext {
   return {
     brandName: brand.brandName.trim() || "brand kamu",
     mainOffer: brand.mainOffer.trim() || "produk utama",
@@ -414,7 +416,7 @@ function getBrandContext() {
   };
 }
 
-function setBrandContext(context = {}) {
+function setBrandContext(context: Partial<BrandContext> = {}) {
   Object.assign(brand, {
     brandName: context.brandName || "",
     mainOffer: context.mainOffer || "",
@@ -425,12 +427,12 @@ function setBrandContext(context = {}) {
   });
 }
 
-function askAI({ topic, instruction, format }) {
+function askAI({ topic, instruction, format }: AskAIPayload): Promise<string> {
   return generateContent({ topic, instruction, format, context: getBrandContext() });
 }
 
-function friendlyAIError(message) {
-  const text = message || "";
+function friendlyAIError(message: unknown): string {
+  const text = String(message || "");
   if (/quota|rate limit|exceeded|Too Many Requests|429/i.test(text)) return "Limit gratis Gemini sedang habis untuk model ini. Tunggu beberapa saat sampai kuota reset, atau ganti model/provider.";
   if (/API key not valid|API_KEY_INVALID|invalid api key/i.test(text)) return "Gemini API key belum valid. Cek lagi GEMINI_API_KEY di file .env, lalu restart server.";
   if (/GEMINI_API_KEY belum diset/i.test(text)) return "GEMINI_API_KEY belum diset di file .env. Isi key Gemini dulu, lalu restart server.";
@@ -439,18 +441,18 @@ function friendlyAIError(message) {
   return text;
 }
 
-function partLabel(part) {
+function partLabel(part: ScriptPart): string {
   return partLabels[part] || part;
 }
 
-function draftFromParts(parts) {
+function draftFromParts(parts: Partial<Record<ScriptPart, string>>): string {
   return Object.entries(partLabels)
-    .map(([key, label]) => `${label}\n${parts[key] ? scriptLine(parts[key]) : "-"}`)
+    .map(([key, label]) => `${label}\n${parts[key as ScriptPart] ? scriptLine(parts[key as ScriptPart]) : "-"}`)
     .join("\n\n");
 }
 
-function parseFullScript(text) {
-  const sections = { hook: "", foreshadow: "", body: "", cta: "" };
+function parseFullScript(text: string): Record<ScriptPart, string> {
+  const sections: Record<ScriptPart, string> = { hook: "", foreshadow: "", body: "", cta: "" };
   const normalized = String(text || "").replace(/\r/g, "").trim();
   const patterns = {
     hook: /(?:^|\n)\s*(?:HOOK|1\.\s*HOOK)\s*[:\-]?\s*\n?([\s\S]*?)(?=\n\s*(?:FORESHADOW|2\.\s*FORESHADOW|ISI|BODY|3\.\s*(?:ISI|BODY)|CTA|4\.\s*CTA)\s*[:\-]?|\s*$)/i,
@@ -458,7 +460,7 @@ function parseFullScript(text) {
     body: /(?:^|\n)\s*(?:ISI|BODY|3\.\s*(?:ISI|BODY))\s*[:\-]?\s*\n?([\s\S]*?)(?=\n\s*(?:CTA|4\.\s*CTA)\s*[:\-]?|\s*$)/i,
     cta: /(?:^|\n)\s*(?:CTA|4\.\s*CTA)\s*[:\-]?\s*\n?([\s\S]*?)\s*$/i,
   };
-  for (const [key, pattern] of Object.entries(patterns)) {
+  for (const [key, pattern] of Object.entries(patterns) as [ScriptPart, RegExp][]) {
     const match = normalized.match(pattern);
     sections[key] = match ? match[1].trim() : "";
   }
@@ -466,7 +468,7 @@ function parseFullScript(text) {
   return sections;
 }
 
-async function copyText(text) {
+async function copyText(text: string) {
   const cleanText = String(text || "").trim();
   if (!cleanText) {
     showToast("Tidak ada teks untuk disalin.");
@@ -504,7 +506,7 @@ async function generateBlueprint() {
     blueprintResult.value = text;
     state.lastBlueprintResult = text;
   } catch (error) {
-    const errorHtml = `<h2>AI belum tersambung</h2><p>${friendlyAIError(error.message)}</p>`;
+    const errorHtml = `<h2>AI belum tersambung</h2><p>${friendlyAIError(error instanceof Error ? error.message : error)}</p>`;
     blueprintResult.value = errorHtml;
     state.lastBlueprintResult = errorHtml;
   } finally {
@@ -512,7 +514,7 @@ async function generateBlueprint() {
   }
 }
 
-function blueprintTitle(context) {
+function blueprintTitle(context: BrandContext): string {
   const brandName = context.brandName || "Brand tanpa nama";
   const niche = context.mainOffer || context.contentGoal || "Niche belum diisi";
   return `${brandName} - ${niche}`.slice(0, 90);
@@ -547,7 +549,7 @@ function saveCurrentBlueprint() {
   showToast("Blueprint tersimpan dan aktif.");
 }
 
-function activateBlueprint(id) {
+function activateBlueprint(id: string) {
   const profile = state.blueprints.find((item) => item.id === id);
   if (!profile) return;
   state.activeBlueprintId = id;
@@ -560,7 +562,7 @@ function activateBlueprint(id) {
   showToast("Blueprint aktif dipakai generator.");
 }
 
-function deleteBlueprint(id) {
+function deleteBlueprint(id: string) {
   state.blueprints = state.blueprints.filter((item) => item.id !== id);
   if (state.activeBlueprintId === id) state.activeBlueprintId = null;
   persistBlueprints();
@@ -584,13 +586,13 @@ async function submitIdea() {
     });
     updateChatMessage(thinkingId, renderAIText(text));
   } catch (error) {
-    updateChatMessage(thinkingId, friendlyAIError(error.message));
+    updateChatMessage(thinkingId, friendlyAIError(error instanceof Error ? error.message : error));
   }
   await nextTick();
   scrollChat();
 }
 
-function updateChatMessage(id, html) {
+function updateChatMessage(id: string, html: string) {
   const message = chatMessages.value.find((item) => item.id === id);
   if (message) message.html = html;
 }
@@ -599,7 +601,7 @@ function scrollChat() {
   if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight;
 }
 
-async function generateFullScript(target) {
+async function generateFullScript(target: "script" | "funnel") {
   const topic = target === "script" ? scriptTopic.value.trim() : state.funnelTopic.trim();
   if (!topic) {
     showToast("Isi atau pilih topik dulu.");
@@ -622,13 +624,13 @@ async function generateFullScript(target) {
     });
     showToast("Full script berhasil dibuat.");
   } catch (error) {
-    showToast(friendlyAIError(error.message));
+    showToast(friendlyAIError(error instanceof Error ? error.message : error));
   } finally {
     loading[target === "script" ? "scriptFull" : "funnelFull"] = false;
   }
 }
 
-async function generateOptions(part, target) {
+async function generateOptions(part: ScriptPart, target: "script" | "funnel") {
   const topic = target === "script" ? scriptTopic.value.trim() : state.funnelTopic.trim();
   if (!topic) {
     showToast(target === "script" ? "Isi topik dulu." : "Pilih ide funnel dulu.");
@@ -653,19 +655,19 @@ async function generateOptions(part, target) {
     if (target === "script") scriptChoices.value = options;
     else funnelChoices.value = options;
   } catch (error) {
-    showToast(friendlyAIError(error.message));
+    showToast(friendlyAIError(error instanceof Error ? error.message : error));
   } finally {
     loading.scriptPart = "";
     loading.funnelPart = "";
   }
 }
 
-function selectScriptChoice(option, index) {
+function selectScriptChoice(option: ScriptChoice, index: number) {
   selectedScriptChoice.value = index;
   state.scriptParts[option.part] = option.text;
 }
 
-function selectFunnelChoice(option, index) {
+function selectFunnelChoice(option: ScriptChoice, index: number) {
   selectedFunnelChoice.value = index;
   state.funnelParts[option.part] = option.text;
 }
@@ -690,13 +692,17 @@ async function transcribeVideo() {
       context: getBrandContext(),
     });
   } catch (error) {
-    videoScript.value = friendlyAIError(error.message);
+    videoScript.value = friendlyAIError(error instanceof Error ? error.message : error);
   } finally {
     loading.transcribe = false;
   }
 }
 
-function fileToBase64(file) {
+function setVideoFile(event: Event) {
+  videoFile.value = (event.target as HTMLInputElement | null)?.files?.[0] || null;
+}
+
+function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
@@ -720,13 +726,13 @@ async function remixScript() {
       format: "Format script final: HOOK, FORESHADOW, ISI, CTA, ARAH VISUAL, CATATAN ADAPTASI. Buat siap dipakai untuk video pendek.",
     });
   } catch (error) {
-    remixResult.value = friendlyAIError(error.message);
+    remixResult.value = friendlyAIError(error instanceof Error ? error.message : error);
   } finally {
     loading.remix = false;
   }
 }
 
-async function renderFunnelIdeas(type) {
+async function renderFunnelIdeas(type: FunnelStage) {
   state.currentFunnel = type;
   state.funnelTopic = "";
   state.funnelParts = {};
@@ -743,24 +749,24 @@ async function renderFunnelIdeas(type) {
     });
     funnelIdeas.value = splitAIOptions(text);
   } catch (error) {
-    funnelError.value = friendlyAIError(error.message);
+    funnelError.value = friendlyAIError(error instanceof Error ? error.message : error);
   } finally {
     loading.funnelIdeas = false;
   }
 }
 
-function selectFunnelIdea(idea) {
+function selectFunnelIdea(idea: string) {
   state.funnelTopic = idea;
   state.funnelParts = {};
   funnelChoices.value = [];
   selectedFunnelChoice.value = null;
 }
 
-function moveMonth(delta) {
+function moveMonth(delta: number) {
   state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + delta, 1);
 }
 
-function openPlanEditor(key) {
+function openPlanEditor(key: string) {
   state.selectedDate = key;
   planTitle.value = state.plans[key]?.title || "";
   planScript.value = state.plans[key]?.script || "";
@@ -780,17 +786,17 @@ function savePlan() {
   showToast("Plan tersimpan.");
 }
 
-function planRows() {
+function planRows(): PlanRow[] {
   return Object.entries(state.plans)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, plan]) => ({ date, title: plan.title || "", script: plan.script || "" }));
 }
 
-function csvEscape(value) {
+function csvEscape(value: string) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
 
-function downloadTextFile(filename, content, type) {
+function downloadTextFile(filename: string, content: string, type: string) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -822,7 +828,7 @@ function exportCalendarJson() {
   downloadTextFile("kalendar-konten.json", JSON.stringify(rows, null, 2), "application/json;charset=utf-8");
 }
 
-let saveTimer = null;
+let saveTimer: number | undefined;
 function saveWorkspaceSoon() {
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(saveWorkspaceNow, 250);
@@ -846,9 +852,9 @@ const workspaceReady = ref(false);
 
 async function loadWorkspaceState() {
   const isLoggedIn = Boolean(auth.user);
-  const localPlans = storage.read("creatorPlans", "{}");
-  const localBlueprints = storage.read("creatorBlueprints", "[]");
-  const localActiveBlueprintId = storage.read("activeBlueprintId", "null");
+  const localPlans = storage.read<Record<string, PlanItem>>("creatorPlans", "{}");
+  const localBlueprints = storage.read<BlueprintProfile[]>("creatorBlueprints", "[]");
+  const localActiveBlueprintId = storage.read<string | null>("activeBlueprintId", "null");
   state.plans = isLoggedIn ? {} : localPlans;
   state.blueprints = isLoggedIn ? [] : localBlueprints;
   state.activeBlueprintId = isLoggedIn ? null : localActiveBlueprintId;
@@ -919,49 +925,19 @@ function clearLocalSessionState() {
 }
 
 async function initAuth() {
-  try {
-    const config = await fetchConfig();
-    if (!config.supabaseUrl || !config.supabasePublishableKey || !window.supabase?.createClient) {
-      auth.ready = false;
-      return;
-    }
-    auth.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey);
-    const { data } = await auth.client.auth.getSession();
-    auth.user = data.session?.user || null;
-    auth.ready = true;
-    auth.client.auth.onAuthStateChange(async (event, session) => {
-      const previousUserId = auth.user?.id || null;
-      auth.user = session?.user || null;
-      const nextUserId = auth.user?.id || null;
-      if (event !== "INITIAL_SESSION" && previousUserId !== nextUserId) await loadWorkspaceState();
-    });
-  } catch (error) {
-    auth.ready = false;
-  }
+  auth.client = null;
+  auth.user = null;
+  auth.ready = true;
 }
 
 async function loginWithGoogle() {
-  if (!auth.client) {
-    showToast("Login Google belum aktif. Tambahkan SUPABASE_PUBLISHABLE_KEY dulu.");
-    return;
-  }
-  const { error } = await auth.client.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: window.location.origin + window.location.pathname },
-  });
-  if (error) showToast(error.message);
+  showToast("Login Google dinonaktifkan. Data memakai SQL database.");
 }
 
 async function logoutGoogle() {
-  if (!auth.client) return;
-  const { error } = await auth.client.auth.signOut();
-  if (error) {
-    showToast(error.message);
-    return;
-  }
   auth.user = null;
   clearLocalSessionState();
-  showToast("Logout berhasil.");
+  showToast("Session lokal dibersihkan.");
 }
 
 function showAuthRedirectError() {

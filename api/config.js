@@ -6,8 +6,5 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  sendJson(res, 200, {
-    supabaseUrl: (process.env.SUPABASE_URL || "").replace(/\/+$/, ""),
-    supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "",
-  });
+  sendJson(res, 200, { authProvider: "none" });
 };

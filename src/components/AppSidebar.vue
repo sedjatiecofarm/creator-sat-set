@@ -31,7 +31,7 @@
 
     <div class="auth-actions">
       <button v-if="!hasUser" class="auth-btn" type="button" :disabled="!authReady" @click="$emit('login')">
-        {{ authReady ? "Login Google" : "Login belum aktif" }}
+        {{ authReady ? "Mode SQL" : "Database belum siap" }}
       </button>
       <button v-else class="auth-btn muted-btn" type="button" @click="$emit('logout')">Logout</button>
     </div>

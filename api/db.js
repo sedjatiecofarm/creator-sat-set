@@ -1,19 +1,21 @@
-const { defaultDb, parseBody, readSupabaseDb, sendJson, writeSupabaseDb } = require("./_shared");
+const { parseBody, sendJson } = require("./_shared");
+const { defaultDb, readDb, writeDb } = require("./stateDb");
 
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const requestUrl = new URL(req.url || "/api/db", "https://creator-sat-set.vercel.app");
-      sendJson(res, 200, await readSupabaseDb(requestUrl.searchParams.get("workspaceId")));
+      sendJson(res, 200, await readDb(requestUrl.searchParams.get("workspaceId")));
       return;
     }
 
     if (req.method === "POST") {
       const body = await parseBody(req);
-      await writeSupabaseDb({
-        plans: body.plans || {},
-        blueprints: body.blueprints || [],
-        activeBlueprintId: body.activeBlueprintId ?? null,
+      const current = await readDb(body.workspaceId);
+      await writeDb({
+        plans: body.plans || current.plans || {},
+        blueprints: body.blueprints || current.blueprints || [],
+        activeBlueprintId: body.activeBlueprintId ?? current.activeBlueprintId ?? null,
       }, body.workspaceId);
       sendJson(res, 200, { ok: true });
       return;
