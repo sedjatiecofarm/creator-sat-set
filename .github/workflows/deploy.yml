@@ -74,6 +74,20 @@ jobs:
               exit 1
             fi
 
+            # Bebaskan port 80 & 443 jika dipakai proses lain (nginx/apache)
+            echo "🔍 Cek port 80 & 443..."
+            for PORT in 80 443; do
+              PID=$(lsof -ti tcp:$PORT 2>/dev/null || true)
+              if [ -n "$PID" ]; then
+                echo "⚠️  Port $PORT dipakai PID $PID, stop dulu..."
+                kill -9 $PID 2>/dev/null || true
+              fi
+            done
+            systemctl stop nginx 2>/dev/null || true
+            systemctl stop apache2 2>/dev/null || true
+            systemctl disable nginx 2>/dev/null || true
+            systemctl disable apache2 2>/dev/null || true
+
             echo "🐳 Building & starting Docker containers..."
             docker compose pull --ignore-pull-failures || true
             docker compose up --build -d
