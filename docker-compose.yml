@@ -1,8 +1,8 @@
 services:
   app:
     build: .
-    ports:
-      - "8787:8787"
+    expose:
+      - "8787"
     environment:
       PORT: 8787
       DATABASE_URL: postgresql://creator:creator_password@db:5432/creator_sat_set?schema=public
@@ -16,6 +16,15 @@ services:
       NINE_ROUTER_API_KEY: ${NINE_ROUTER_API_KEY:-}
       NINE_ROUTER_MODEL: ${NINE_ROUTER_MODEL:-content-ai}
       NINE_ROUTER_ENDPOINT: ${NINE_ROUTER_ENDPOINT:-https://9router.crsdigi.tech/v1}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.creatorss.rule=Host(`creator.crsdigi.tech`)"
+      - "traefik.http.routers.creatorss.entrypoints=websecure"
+      - "traefik.http.routers.creatorss.tls.certresolver=letsencrypt"
+      - "traefik.http.services.creatorss.loadbalancer.server.port=8787"
+    networks:
+      - internal
+      - traefik-public
     depends_on:
       db:
         condition: service_healthy
@@ -34,7 +43,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - internal
     restart: unless-stopped
+
+networks:
+  internal:
+    driver: bridge
+  traefik-public:
+    external: true
+    name: attendance_public-network
 
 volumes:
   postgres-data:
