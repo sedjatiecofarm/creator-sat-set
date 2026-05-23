@@ -1,8 +1,8 @@
 services:
   app:
     build: .
-    expose:
-      - "8787"
+    ports:
+      - "8787:8787"
     environment:
       PORT: 8787
       DATABASE_URL: postgresql://creator:creator_password@db:5432/creator_sat_set?schema=public
@@ -19,6 +19,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
 
   db:
     image: postgres:16-alpine
@@ -33,22 +34,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  caddy:
-    image: caddy:2-alpine
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      - app
     restart: unless-stopped
 
 volumes:
   postgres-data:
-  caddy-data:
-  caddy-config:

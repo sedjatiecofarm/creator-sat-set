@@ -1,3 +1,0 @@
-creator.crsdigi.tech {
-    reverse_proxy app:8787
-}
