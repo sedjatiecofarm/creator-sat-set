@@ -24,6 +24,8 @@ function summarizeWorkspace(row) {
     id: row.id,
     email,
     activeBrand: activeBlueprint?.context?.brandName || latestHistory?.brand || "-",
+    lastProvider: latestHistory?.provider || "-",
+    lastModel: latestHistory?.model || "-",
     generateToday: Number(today.generate || 0),
     transcribeToday: Number(today.transcribe || 0),
     totalToday: Number(today.total || 0),
