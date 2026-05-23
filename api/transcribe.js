@@ -1,4 +1,4 @@
-const { parseBody, sendJson, transcribeWithGemini } = require("./_shared");
+const { parseBody, sendJson, transcribeWithNineRouter } = require("./_shared");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -8,8 +8,8 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = await parseBody(req);
-    const text = await transcribeWithGemini(body);
-    sendJson(res, 200, { text, provider: "gemini" });
+    const text = await transcribeWithNineRouter(body);
+    sendJson(res, 200, { text, provider: "9router" });
   } catch (error) {
     sendJson(res, 500, { error: error.message || "Terjadi error saat transkripsi." });
   }

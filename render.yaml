@@ -10,11 +10,21 @@ services:
         sync: false
       - key: APP_STATE_ID
         value: creator-sat-set
+      - key: LOGIN_PIN
+        sync: false
+      - key: PIN_SESSION_SECRET
+        sync: false
+      - key: PIN_SESSION_TTL_MS
+        value: 604800000
       - key: AI_PROVIDER
-        value: gemini
+        value: 9router
       - key: AI_PROVIDER_ORDER
-        value: gemini,openrouter,groq
-      - key: GEMINI_MODEL
-        value: gemini-2.5-flash
-      - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: 9router
+      - key: AI_FALLBACK
+        value: false
+      - key: NINE_ROUTER_API_KEY
+        sync: false
+      - key: NINE_ROUTER_MODEL
+        value: content-ai
+      - key: NINE_ROUTER_ENDPOINT
+        value: https://9router.crsdigi.tech/v1

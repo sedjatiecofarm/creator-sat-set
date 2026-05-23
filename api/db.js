@@ -16,6 +16,8 @@ module.exports = async function handler(req, res) {
         plans: body.plans || current.plans || {},
         blueprints: body.blueprints || current.blueprints || [],
         activeBlueprintId: body.activeBlueprintId ?? current.activeBlueprintId ?? null,
+        history: body.history || current.history || [],
+        usage: body.usage || current.usage || {},
       }, body.workspaceId);
       sendJson(res, 200, { ok: true });
       return;

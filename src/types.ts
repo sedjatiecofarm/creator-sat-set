@@ -16,6 +16,7 @@ export interface BrandContext {
   painPoint: string;
   brandTone: string;
   contentGoal: string;
+  brandDna?: string;
 }
 
 export interface PlanItem {
@@ -35,6 +36,8 @@ export interface WorkspaceState {
   plans: Record<string, PlanItem>;
   blueprints: BlueprintProfile[];
   activeBlueprintId: string | null;
+  history?: GenerationHistoryItem[];
+  usage?: Record<string, UsageBucket>;
   updatedAt?: string | null;
 }
 
@@ -90,4 +93,39 @@ export interface AskAIPayload {
   topic?: string;
   instruction: string;
   format: string;
+}
+
+export interface ScriptSettings {
+  type: string;
+  duration: string;
+  platform: string;
+}
+
+export interface UsageBucket {
+  total: number;
+  generate: number;
+  transcribe: number;
+}
+
+export interface UsagePayload {
+  day?: string;
+  bucket?: UsageBucket;
+}
+
+export interface AiResult {
+  text: string;
+  provider?: string;
+  model?: string;
+  usage?: UsagePayload;
+}
+
+export interface GenerationHistoryItem {
+  id: string;
+  type: string;
+  input: string;
+  output: string;
+  provider: string;
+  model: string;
+  brand: string;
+  createdAt: string;
 }

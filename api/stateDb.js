@@ -7,6 +7,8 @@ function defaultDb() {
     plans: {},
     blueprints: [],
     activeBlueprintId: null,
+    history: [],
+    usage: {},
     updatedAt: null,
   };
 }
