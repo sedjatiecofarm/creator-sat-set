@@ -544,7 +544,16 @@ function getAIContext() {
   return getBrandContext();
 }
 
+function requireLoginForAI() {
+  if (authState.user) return true;
+  showToast("Silakan login Google dulu untuk menggunakan fitur AI.");
+  return false;
+}
+
 async function askAI({ topic, instruction, format }) {
+  if (!requireLoginForAI()) {
+    throw new Error("LOGIN_REQUIRED");
+  }
   let response;
   const session = authState.client ? (await authState.client.auth.getSession()).data.session : null;
   try {
@@ -589,6 +598,9 @@ async function askAI({ topic, instruction, format }) {
 }
 
 async function transcribeMedia(file) {
+  if (!requireLoginForAI()) {
+    throw new Error("LOGIN_REQUIRED");
+  }
   const base64 = await fileToBase64(file);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90_000);
@@ -876,6 +888,9 @@ function showAIError(container, error) {
 
 function friendlyAIError(message) {
   const text = message || "";
+  if (/LOGIN_REQUIRED/i.test(text)) {
+    return "Silakan login Google dulu untuk menggunakan fitur AI.";
+  }
   if (/Limit generate harian/i.test(text)) {
     return text;
   }
@@ -1023,6 +1038,14 @@ async function renderFunnelIdeas(type) {
   intro.className = "funnel-note";
   intro.textContent = `${meta.name}: ${meta.job}. Tujuannya ${meta.intent}.`;
   list.appendChild(intro);
+
+  if (!authState.user) {
+    const box = document.createElement("div");
+    box.className = "ai-error";
+    box.textContent = "Login Google dulu untuk generate ide konten funnel.";
+    list.appendChild(box);
+    return;
+  }
 
   const loading = document.createElement("div");
   loading.className = "ai-loading";

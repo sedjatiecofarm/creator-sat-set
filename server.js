@@ -172,8 +172,18 @@ function getRequester(body) {
   };
 }
 
-async function enforceDailyGenerateLimit(body) {
+function requireLoggedInUser(body) {
   const requester = getRequester(body || {});
+  if (!requester.email || !requester.workspaceId.startsWith("user-")) {
+    const error = new Error("Login Google diperlukan untuk menggunakan AI.");
+    error.statusCode = 401;
+    throw error;
+  }
+  return requester;
+}
+
+async function enforceDailyGenerateLimit(body) {
+  const requester = requireLoggedInUser(body || {});
   const day = todayKey();
   if (requester.isAdmin) return { skipped: true, day };
 
@@ -379,10 +389,11 @@ async function handleGenerate(req, res) {
 async function handleTranscribe(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
+    await enforceDailyGenerateLimit(body);
     const text = await transcribeWithGemini(body);
     sendJson(res, 200, { text, provider: "gemini" });
   } catch (error) {
-    sendJson(res, 500, { error: error.message || "Terjadi error saat transkripsi." });
+    sendJson(res, error.statusCode || 500, { error: error.message || "Terjadi error saat transkripsi." });
   }
 }
 
