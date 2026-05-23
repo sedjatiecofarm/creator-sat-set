@@ -90,14 +90,82 @@ async function transcribeWithNineRouter() {
 
 async function parseNineRouterResponse(response) {
   const raw = await response.text();
-  const jsonText = raw.replace(/\ndata:\s*\[DONE\]\s*$/i, "").trim();
+  const streamData = parseNineRouterStream(raw);
+  if (streamData) return streamData;
+
+  const jsonText = extractFirstJsonObject(raw);
   if (!jsonText) return {};
-  try {
-    return JSON.parse(jsonText);
-  } catch {
-    const firstJson = jsonText.match(/\{[\s\S]*\}/)?.[0];
-    return firstJson ? JSON.parse(firstJson) : {};
+  return JSON.parse(jsonText);
+}
+
+function parseNineRouterStream(raw) {
+  const lines = String(raw || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("data:"));
+
+  if (!lines.length) return null;
+
+  const chunks = [];
+  let lastChunk = null;
+
+  for (const line of lines) {
+    const payload = line.replace(/^data:\s*/, "").trim();
+    if (!payload || payload === "[DONE]") continue;
+    const parsed = JSON.parse(payload);
+    lastChunk = parsed;
+    const delta = parsed.choices?.[0]?.delta;
+    const content = delta?.content || delta?.reasoning_content || "";
+    if (content) chunks.push(content);
   }
+
+  return {
+    ...lastChunk,
+    choices: [
+      {
+        message: {
+          role: "assistant",
+          content: chunks.join("").trim(),
+        },
+      },
+    ],
+  };
+}
+
+function extractFirstJsonObject(raw) {
+  const text = String(raw || "").trim();
+  const start = text.indexOf("{");
+  if (start < 0) return "";
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") depth += 1;
+    if (char === "}") depth -= 1;
+    if (depth === 0) return text.slice(start, index + 1);
+  }
+
+  return "";
 }
 
 function extractChatText(data) {
