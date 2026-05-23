@@ -94,7 +94,7 @@ async function parseNineRouterResponse(response) {
   if (!jsonText) return {};
   try {
     return JSON.parse(jsonText);
-  } catch (error) {
+  } catch {
     const firstJson = jsonText.match(/\{[\s\S]*\}/)?.[0];
     return firstJson ? JSON.parse(firstJson) : {};
   }

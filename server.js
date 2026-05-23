@@ -61,7 +61,7 @@ const server = http.createServer(async (req, res) => {
   if (requestUrl.pathname === "/api/db" && req.method === "GET") {
     try {
       sendJson(res, 200, await readDb(requestUrl.searchParams.get("workspaceId")));
-    } catch (error) {
+    } catch {
       sendJson(res, 200, defaultDb());
     }
     return;
@@ -225,7 +225,7 @@ async function parseNineRouterResponse(response) {
   if (!jsonText) return {};
   try {
     return JSON.parse(jsonText);
-  } catch (error) {
+  } catch {
     const firstJson = jsonText.match(/\{[\s\S]*\}/)?.[0];
     return firstJson ? JSON.parse(firstJson) : {};
   }

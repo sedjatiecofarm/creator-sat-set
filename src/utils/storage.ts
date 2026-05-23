@@ -2,7 +2,7 @@ export const storage = {
   read<T>(key: string, fallback: string): T {
     try {
       return JSON.parse(localStorage.getItem(key) || fallback) as T;
-    } catch (error) {
+    } catch {
       return JSON.parse(fallback) as T;
     }
   },

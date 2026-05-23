@@ -40,7 +40,7 @@ onMounted(async () => {
     const session = await verifyPinSession();
     pinAuthenticated.value = session.ok;
     if (!session.ok) clearSessionToken();
-  } catch (error) {
+  } catch {
     clearSessionToken();
   }
 });
