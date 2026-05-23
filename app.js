@@ -582,7 +582,7 @@ async function askAI({ topic, instruction, format }) {
     model: data.model,
     skipUsage: Boolean(data.usage),
   });
-  if (data.provider && data.provider !== "gemini") {
+  if (isAdminUser() && data.provider && data.provider !== "gemini") {
     showToast(`AI fallback aktif: hasil dibuat via ${data.provider}.`);
   }
   return data.text;
@@ -1186,12 +1186,12 @@ function renderHistory() {
 
 async function loadAdminDashboard() {
   if (!isAdminUser()) {
-    $("#adminRows").innerHTML = '<tr><td colspan="7">Dashboard admin hanya untuk akun admin.</td></tr>';
+    $("#adminRows").innerHTML = '<tr><td colspan="8">Dashboard admin hanya untuk akun admin.</td></tr>';
     $("#adminSummary").innerHTML = "";
     return;
   }
 
-  $("#adminRows").innerHTML = '<tr><td colspan="7">Memuat data admin...</td></tr>';
+  $("#adminRows").innerHTML = '<tr><td colspan="8">Memuat data admin...</td></tr>';
   try {
     const response = await fetch(`${API_BASE}/api/admin`, {
       method: "POST",
@@ -1202,7 +1202,7 @@ async function loadAdminDashboard() {
     if (!response.ok) throw new Error([data.error, data.detail].filter(Boolean).join(" - ") || "Gagal membaca data admin.");
     renderAdminDashboard(data);
   } catch (error) {
-    $("#adminRows").innerHTML = `<tr><td colspan="7">Gagal membaca data admin: ${escapeHtml(error.message)}</td></tr>`;
+    $("#adminRows").innerHTML = `<tr><td colspan="8">Gagal membaca data admin: ${escapeHtml(error.message)}</td></tr>`;
     $("#adminSummary").innerHTML = "";
   }
 }
@@ -1212,18 +1212,21 @@ function renderAdminDashboard(data) {
   const totalGenerate = users.reduce((sum, user) => sum + Number(user.generateToday || 0), 0);
   const totalTranscribe = users.reduce((sum, user) => sum + Number(user.transcribeToday || 0), 0);
   const activeUsers = users.filter((user) => user.generateToday || user.transcribeToday).length;
+  const lastAiUser = users.find((user) => user.lastProvider && user.lastProvider !== "-");
+  const lastAiLabel = lastAiUser ? `${lastAiUser.lastProvider}${lastAiUser.lastModel && lastAiUser.lastModel !== "-" ? ` / ${lastAiUser.lastModel}` : ""}` : "-";
 
   $("#adminSummary").innerHTML = [
     ["User tersimpan", users.length],
     ["Aktif hari ini", activeUsers],
     ["Generate hari ini", totalGenerate],
     ["Transkripsi hari ini", totalTranscribe],
+    ["AI aktif terakhir", lastAiLabel],
   ]
     .map(([label, value]) => `<div class="usage-card"><strong>${value}</strong><span>${label}</span></div>`)
     .join("");
 
   if (!users.length) {
-    $("#adminRows").innerHTML = '<tr><td colspan="7">Belum ada data user.</td></tr>';
+    $("#adminRows").innerHTML = '<tr><td colspan="8">Belum ada data user.</td></tr>';
     return;
   }
 
@@ -1234,6 +1237,7 @@ function renderAdminDashboard(data) {
         <tr>
           <td><strong>${escapeHtml(user.email || "-")}</strong><span>${escapeHtml(user.id)}</span></td>
           <td>${escapeHtml(user.activeBrand || "-")}</td>
+          <td>${escapeHtml(user.lastProvider || "-")}<span>${escapeHtml(user.lastModel || "-")}</span></td>
           <td>${Number(user.generateToday || 0)}</td>
           <td>${Number(user.transcribeToday || 0)}</td>
           <td>${Number(user.blueprintCount || 0)}</td>
