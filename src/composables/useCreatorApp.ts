@@ -275,7 +275,7 @@ async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(cleanText);
     showToast("Teks disalin.");
-  } catch (error) {
+  } catch {
     showToast("Gagal menyalin. Blok teks lalu tekan Ctrl+C.");
   }
 }
@@ -651,7 +651,7 @@ async function saveWorkspaceNow() {
       history: state.history,
       usage: state.usage,
     });
-  } catch (error) {
+  } catch {
     workspaceReady.value = false;
   }
 }
@@ -689,7 +689,7 @@ async function loadWorkspaceState() {
       state.usage = localUsage;
       saveWorkspaceNow();
     }
-  } catch (error) {
+  } catch {
     workspaceReady.value = false;
   }
 
@@ -715,7 +715,7 @@ function clearLocalSessionState() {
   ["creatorPlans", "creatorBlueprints", "activeBlueprintId", "creatorWorkspaceId", "creatorHistory", "creatorUsage"].forEach((key) => {
     try {
       storage.remove(key);
-    } catch (error) {
+    } catch {
       // Ignore local cleanup errors.
     }
   });
