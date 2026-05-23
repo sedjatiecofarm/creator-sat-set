@@ -221,14 +221,45 @@ async function transcribeWithNineRouter() {
 
 async function parseNineRouterResponse(response) {
   const raw = await response.text();
-  const jsonText = raw.replace(/\ndata:\s*\[DONE\]\s*$/i, "").trim();
+  const jsonText = extractFirstJsonObject(raw);
   if (!jsonText) return {};
-  try {
-    return JSON.parse(jsonText);
-  } catch {
-    const firstJson = jsonText.match(/\{[\s\S]*\}/)?.[0];
-    return firstJson ? JSON.parse(firstJson) : {};
+  return JSON.parse(jsonText);
+}
+
+function extractFirstJsonObject(raw) {
+  const text = String(raw || "").trim();
+  const start = text.indexOf("{");
+  if (start < 0) return "";
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") depth += 1;
+    if (char === "}") depth -= 1;
+    if (depth === 0) return text.slice(start, index + 1);
   }
+
+  return "";
 }
 
 function extractChatText(data) {
