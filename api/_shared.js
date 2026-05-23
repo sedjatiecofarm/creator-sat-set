@@ -90,9 +90,46 @@ async function transcribeWithNineRouter() {
 
 async function parseNineRouterResponse(response) {
   const raw = await response.text();
+  const streamData = parseNineRouterStream(raw);
+  if (streamData) return streamData;
+
   const jsonText = extractFirstJsonObject(raw);
   if (!jsonText) return {};
   return JSON.parse(jsonText);
+}
+
+function parseNineRouterStream(raw) {
+  const lines = String(raw || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("data:"));
+
+  if (!lines.length) return null;
+
+  const chunks = [];
+  let lastChunk = null;
+
+  for (const line of lines) {
+    const payload = line.replace(/^data:\s*/, "").trim();
+    if (!payload || payload === "[DONE]") continue;
+    const parsed = JSON.parse(payload);
+    lastChunk = parsed;
+    const delta = parsed.choices?.[0]?.delta;
+    const content = delta?.content || delta?.reasoning_content || "";
+    if (content) chunks.push(content);
+  }
+
+  return {
+    ...lastChunk,
+    choices: [
+      {
+        message: {
+          role: "assistant",
+          content: chunks.join("").trim(),
+        },
+      },
+    ],
+  };
 }
 
 function extractFirstJsonObject(raw) {
