@@ -16,7 +16,8 @@
         type="button"
         @click="$emit('navigate', item.id)"
       >
-        <b class="menu-icon">{{ item.icon }}</b>{{ item.label }}
+        <b class="menu-icon">{{ item.icon }}</b>
+        <span class="nav-label">{{ item.label }}</span>
       </button>
     </nav>
 
