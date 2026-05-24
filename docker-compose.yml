@@ -18,6 +18,7 @@ services:
       NINE_ROUTER_ENDPOINT: ${NINE_ROUTER_ENDPOINT:-https://9router.crsdigi.tech/v1}
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=attendance_public-network"
       - "traefik.http.routers.creatorss.rule=Host(`creator.crsdigi.tech`)"
       - "traefik.http.routers.creatorss.entrypoints=websecure"
       - "traefik.http.routers.creatorss.tls.certresolver=letsencrypt"
