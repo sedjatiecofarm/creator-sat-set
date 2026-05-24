@@ -457,3 +457,378 @@
     color: #e24b5b;
   }
 }
+
+@layer components {
+  @media (max-width: 900px) {
+    html,
+    body,
+    #app {
+      min-height: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #app {
+      padding: 0;
+      background: #f7fbff;
+    }
+
+    .app-shell {
+      position: relative;
+      display: block;
+      height: 100%;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      background: #f7fbff;
+      overflow: hidden;
+    }
+
+    .workspace {
+      height: 100%;
+      padding: 12px 12px 92px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: max(10px, env(safe-area-inset-bottom));
+      z-index: 40;
+      height: auto;
+      margin: 0;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 8px;
+      border-radius: 22px;
+      padding: 8px;
+      box-shadow: 0 18px 42px rgb(48 96 150 / .18);
+    }
+
+    .sidebar .brand,
+    .sidebar .account,
+    .sidebar .auth-actions,
+    .sidebar .sidebar-logout {
+      display: none;
+    }
+
+    .nav {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+    }
+
+    .nav::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav-item {
+      flex: 0 0 auto;
+      min-height: 48px;
+      min-width: 58px;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 16px;
+      padding: 0 11px;
+      font-size: 11px;
+      line-height: 1.05;
+      white-space: nowrap;
+    }
+
+    .nav-item .menu-icon {
+      width: 18px;
+      height: 18px;
+      font-size: 12px;
+    }
+
+    .nav-item:not(.active) {
+      color: #6a7689;
+      background: transparent;
+    }
+
+    .workspace-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      min-height: auto;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 18px;
+      gap: 8px;
+      backdrop-filter: blur(16px);
+      background: rgb(255 255 255 / .92);
+    }
+
+    .topbar-search {
+      min-height: 40px;
+      width: 100%;
+      flex: 1;
+      border-radius: 13px;
+      padding: 0 11px;
+    }
+
+    .topbar-search span {
+      font-size: 17px;
+    }
+
+    .topbar-search input {
+      font-size: 13px;
+    }
+
+    .topbar-actions {
+      flex: 0 0 auto;
+      gap: 6px;
+    }
+
+    .status-pill {
+      display: none;
+    }
+
+    .icon-action,
+    .profile-chip {
+      width: 38px;
+      height: 38px;
+    }
+
+    .metric-strip {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 10px;
+      border-radius: 18px;
+    }
+
+    .metric-card {
+      min-height: 76px;
+      padding: 12px;
+      border-right: 0;
+      border-bottom: 1px solid #edf2f8;
+    }
+
+    .metric-card:nth-child(odd) {
+      border-right: 1px solid #edf2f8;
+    }
+
+    .metric-card:nth-last-child(-n + 2) {
+      border-bottom: 0;
+    }
+
+    .metric-card span {
+      font-size: 10.5px;
+    }
+
+    .metric-card strong {
+      margin-top: 5px;
+      font-size: 20px;
+    }
+
+    .metric-card small {
+      margin-top: 6px;
+      font-size: 10.5px;
+    }
+
+    .panel {
+      padding: 16px;
+      margin-bottom: 10px;
+      border-radius: 18px;
+    }
+
+    .section-head,
+    .calendar-head {
+      align-items: flex-start;
+      flex-direction: column;
+      margin-bottom: 14px;
+      gap: 10px;
+    }
+
+    .section-head .ghost-btn,
+    .calendar-actions {
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 19px;
+    }
+
+    h2 {
+      font-size: 16px;
+    }
+
+    .muted {
+      font-size: 12px;
+    }
+
+    .blueprint-grid,
+    #funnel.view.active,
+    #plan.view.active,
+    .funnel-tabs {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    label,
+    .action-row label {
+      min-width: 0;
+      width: 100%;
+      font-size: 12px;
+    }
+
+    textarea {
+      min-height: 78px;
+    }
+
+    .wide-input textarea,
+    .large-textarea {
+      min-height: 110px;
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .action-row .primary-btn,
+    .action-row .soft-btn,
+    .primary-btn,
+    .ghost-btn,
+    .soft-btn {
+      width: 100%;
+    }
+
+    .choice-grid,
+    .saved-list,
+    .idea-list {
+      gap: 8px;
+    }
+
+    .saved-profile {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+
+    .saved-profile .tiny-btn {
+      width: 100%;
+    }
+
+    .result-card,
+    .draft-card,
+    .saved-profile,
+    .choice,
+    .idea-card,
+    .funnel-note,
+    .ai-loading,
+    .ai-error {
+      border-radius: 15px;
+      padding: 12px;
+    }
+
+    .copy-btn {
+      position: static;
+      float: right;
+      margin: 0 0 8px 8px;
+    }
+
+    .chat-box {
+      height: min(52vh, 420px);
+      border-radius: 16px;
+    }
+
+    .bubble {
+      max-width: 94%;
+      border-radius: 15px;
+    }
+
+    .chat-form {
+      grid-template-columns: 1fr;
+    }
+
+    .calendar-actions {
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .month-switcher,
+    .export-actions {
+      flex: 1 1 auto;
+    }
+
+    .calendar {
+      gap: 5px;
+    }
+
+    .day {
+      min-height: 52px;
+      border-radius: 12px;
+      padding: 6px;
+    }
+
+    .day small {
+      display: none;
+    }
+
+    .plan-editor {
+      position: static;
+    }
+
+    .pin-login-page {
+      padding: 14px;
+      min-height: 100dvh;
+    }
+
+    .pin-login-card {
+      padding: 22px;
+      border-radius: 22px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .workspace {
+      padding: 8px 8px 90px;
+    }
+
+    .workspace-topbar {
+      padding: 8px;
+    }
+
+    .topbar-search input::placeholder {
+      color: transparent;
+    }
+
+    .metric-strip {
+      grid-template-columns: 1fr;
+    }
+
+    .metric-card,
+    .metric-card:nth-child(odd) {
+      border-right: 0;
+    }
+
+    .metric-card:nth-last-child(-n + 2) {
+      border-bottom: 1px solid #edf2f8;
+    }
+
+    .metric-card:last-child {
+      border-bottom: 0;
+    }
+
+    .nav-item {
+      min-width: 52px;
+      padding: 0 9px;
+    }
+
+    .nav-item:not(.active) {
+      font-size: 0;
+      gap: 0;
+    }
+
+    .nav-item.active {
+      font-size: 11px;
+    }
+  }
+}
