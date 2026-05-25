@@ -203,7 +203,7 @@ async function enforceDailyGenerateLimit(body) {
   return { skipped: false, day, workspaceId: requester.workspaceId, requester };
 }
 
-async function recordServerGenerateUsage(limitState, result = {}) {
+async function recordServerGenerateUsage(limitState, result = {}, body = {}) {
   if (!limitState) return null;
   if (limitState.skipped) return { day: limitState.day, limit: null, remaining: null, admin: true };
 
@@ -213,13 +213,27 @@ async function recordServerGenerateUsage(limitState, result = {}) {
   bucket.total = Number(bucket.total || 0) + 1;
   bucket.generate = Number(bucket.generate || 0) + 1;
   usage[limitState.day] = bucket;
+  const createdAt = new Date().toISOString();
+  const history = Array.isArray(db.history) ? db.history.slice(0, 100) : [];
+  history.unshift({
+    id: `server-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: "Generate AI",
+    input: String(body.topic || "").slice(0, 900),
+    output: String(result.text || "").slice(0, 4000),
+    provider: result.provider || "-",
+    model: result.model || "-",
+    brand: body.context?.brandName || "",
+    userEmail: limitState.requester?.email || "",
+    createdAt,
+  });
   await writeDb(
     {
       ...db,
       usage,
+      history: history.slice(0, 100),
       lastProvider: result.provider || db.lastProvider || "",
       lastModel: result.model || db.lastModel || "",
-      lastGeneratedAt: new Date().toISOString(),
+      lastGeneratedAt: createdAt,
       lastUserEmail: limitState.requester?.email || db.lastUserEmail || "",
     },
     limitState.workspaceId,
@@ -233,6 +247,33 @@ async function recordServerGenerateUsage(limitState, result = {}) {
   };
 }
 
+function mergeUsage(current = {}, incoming = {}) {
+  const merged = { ...current };
+  for (const [day, bucket] of Object.entries(incoming || {})) {
+    const existing = merged[day] || { total: 0, generate: 0, transcribe: 0 };
+    merged[day] = {
+      total: Math.max(Number(existing.total || 0), Number(bucket.total || 0)),
+      generate: Math.max(Number(existing.generate || 0), Number(bucket.generate || 0)),
+      transcribe: Math.max(Number(existing.transcribe || 0), Number(bucket.transcribe || 0)),
+    };
+  }
+  return merged;
+}
+
+function mergeHistory(current = [], incoming = []) {
+  const items = [...(Array.isArray(current) ? current : []), ...(Array.isArray(incoming) ? incoming : [])];
+  const seen = new Set();
+  return items
+    .filter((item) => {
+      const key = item.id || `${item.createdAt || ""}-${item.type || ""}-${item.input || ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .slice(0, 100);
+}
+
 async function handleSaveDb(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
@@ -242,8 +283,8 @@ async function handleSaveDb(req, res) {
       plans: body.plans || current.plans || {},
       blueprints: body.blueprints || current.blueprints || [],
       activeBlueprintId: body.activeBlueprintId ?? current.activeBlueprintId ?? null,
-      history: Array.isArray(body.history) ? body.history.slice(0, 100) : current.history || [],
-      usage: body.usage && Object.keys(body.usage).length ? body.usage : current.usage || {},
+      history: mergeHistory(current.history, body.history),
+      usage: mergeUsage(current.usage, body.usage),
       lastProvider: body.lastProvider || current.lastProvider || "",
       lastModel: body.lastModel || current.lastModel || "",
       lastGeneratedAt: body.lastGeneratedAt || current.lastGeneratedAt || null,
@@ -398,7 +439,7 @@ async function handleGenerate(req, res) {
     const limitState = await enforceDailyGenerateLimit(body);
     const prompt = buildPrompt(body);
     const result = await callWithFallback(prompt);
-    const usage = await recordServerGenerateUsage(limitState, result);
+    const usage = await recordServerGenerateUsage(limitState, result, body);
     sendJson(res, 200, { ...result, usage });
   } catch (error) {
     sendJson(res, error.statusCode || 500, { error: error.message || "Terjadi error di server AI." });
