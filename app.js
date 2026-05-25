@@ -42,6 +42,10 @@ const db = {
         activeBlueprintId: state.activeBlueprintId,
         history: state.history,
         usage: state.usage,
+        lastProvider: state.lastProvider,
+        lastModel: state.lastModel,
+        lastGeneratedAt: state.lastGeneratedAt,
+        lastUserEmail: authState.user?.email || state.lastUserEmail || "",
       }),
     }).catch(() => {
       this.ready = false;
@@ -67,6 +71,10 @@ const state = {
   usage: storage.read("creatorUsage", "{}"),
   lastBlueprintResult: "",
   blueprintCreatesNew: false,
+  lastProvider: "",
+  lastModel: "",
+  lastGeneratedAt: null,
+  lastUserEmail: "",
 };
 
 const emptyBlueprintHtml = `
@@ -583,6 +591,10 @@ async function askAI({ topic, instruction, format }) {
   if (data.usage?.day && data.usage?.bucket) {
     state.usage[data.usage.day] = data.usage.bucket;
   }
+  state.lastProvider = data.provider || state.lastProvider || "";
+  state.lastModel = data.model || state.lastModel || "";
+  state.lastGeneratedAt = new Date().toISOString();
+  state.lastUserEmail = authState.user?.email || state.lastUserEmail || "";
   recordGeneration({
     type: "Generate AI",
     input: topic,
@@ -840,6 +852,10 @@ function clearLocalSessionState() {
   state.history = [];
   state.usage = {};
   state.lastBlueprintResult = "";
+  state.lastProvider = "";
+  state.lastModel = "";
+  state.lastGeneratedAt = null;
+  state.lastUserEmail = "";
   state.blueprintCreatesNew = false;
   state.scriptParts = {};
   state.funnelParts = {};
@@ -1695,6 +1711,10 @@ async function loadWorkspaceState() {
       state.activeBlueprintId = data.activeBlueprintId || null;
       state.history = data.history || [];
       state.usage = data.usage || {};
+      state.lastProvider = data.lastProvider || "";
+      state.lastModel = data.lastModel || "";
+      state.lastGeneratedAt = data.lastGeneratedAt || null;
+      state.lastUserEmail = data.lastUserEmail || "";
     } else if (!isLoggedIn && (Object.keys(localPlans).length || localBlueprints.length || localHistory.length || Object.keys(localUsage).length)) {
       state.plans = localPlans;
       state.blueprints = localBlueprints;

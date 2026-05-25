@@ -118,6 +118,10 @@ function defaultDb() {
     activeBlueprintId: null,
     history: [],
     usage: {},
+    lastProvider: "",
+    lastModel: "",
+    lastGeneratedAt: null,
+    lastUserEmail: "",
     updatedAt: null,
   };
 }
@@ -240,6 +244,10 @@ async function handleSaveDb(req, res) {
       activeBlueprintId: body.activeBlueprintId ?? current.activeBlueprintId ?? null,
       history: Array.isArray(body.history) ? body.history.slice(0, 100) : current.history || [],
       usage: body.usage || current.usage || {},
+      lastProvider: body.lastProvider || current.lastProvider || "",
+      lastModel: body.lastModel || current.lastModel || "",
+      lastGeneratedAt: body.lastGeneratedAt || current.lastGeneratedAt || null,
+      lastUserEmail: body.lastUserEmail || current.lastUserEmail || "",
     }, workspaceId);
     sendJson(res, 200, { ok: true });
   } catch (error) {
