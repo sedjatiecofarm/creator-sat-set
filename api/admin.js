@@ -77,8 +77,19 @@ module.exports = async function handler(req, res) {
     const users = rows
       .map(summarizeWorkspace)
       .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+    const latestAi = users
+      .filter((user) => user.lastProvider && user.lastProvider !== "-" && user.lastGeneratedAt)
+      .sort((a, b) => String(b.lastGeneratedAt || "").localeCompare(String(a.lastGeneratedAt || "")))[0] || null;
     sendJson(res, 200, {
       today: todayKey(),
+      latestAi: latestAi
+        ? {
+            provider: latestAi.lastProvider,
+            model: latestAi.lastModel,
+            generatedAt: latestAi.lastGeneratedAt,
+            email: latestAi.email,
+          }
+        : null,
       users,
     });
   } catch (error) {

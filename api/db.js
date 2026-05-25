@@ -10,16 +10,17 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "POST") {
       const body = await parseBody(req);
+      const current = await readSupabaseDb(body.workspaceId);
       await writeSupabaseDb({
         plans: body.plans || {},
         blueprints: body.blueprints || [],
         activeBlueprintId: body.activeBlueprintId ?? null,
         history: Array.isArray(body.history) ? body.history.slice(0, 100) : [],
-        usage: body.usage || {},
-        lastProvider: body.lastProvider || "",
-        lastModel: body.lastModel || "",
-        lastGeneratedAt: body.lastGeneratedAt || null,
-        lastUserEmail: body.lastUserEmail || "",
+        usage: body.usage && Object.keys(body.usage).length ? body.usage : current.usage || {},
+        lastProvider: body.lastProvider || current.lastProvider || "",
+        lastModel: body.lastModel || current.lastModel || "",
+        lastGeneratedAt: body.lastGeneratedAt || current.lastGeneratedAt || null,
+        lastUserEmail: body.lastUserEmail || current.lastUserEmail || "",
       }, body.workspaceId);
       sendJson(res, 200, { ok: true });
       return;
