@@ -7,6 +7,8 @@ const adminEmails = (process.env.ADMIN_EMAILS || "sedjatiecofarm@gmail.com")
 const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabaseTable = process.env.SUPABASE_TABLE || "creator_app_state";
+const freeDailyGenerateLimit = Number(process.env.FREE_DAILY_GENERATE_LIMIT || process.env.DAILY_GENERATE_LIMIT || 20);
+const paidDailyGenerateLimit = Number(process.env.PAID_DAILY_GENERATE_LIMIT || 200);
 
 function todayKey() {
   return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -27,10 +29,15 @@ function summarizeWorkspace(row) {
   const generateFromHistory = history.filter((item) => !/transkripsi/i.test(item.type || "") && jakartaDay(item.createdAt) === day).length;
   const transcribeFromHistory = history.filter((item) => /transkripsi/i.test(item.type || "") && jakartaDay(item.createdAt) === day).length;
   const email = data.lastUserEmail || latestHistory?.userEmail || data.userEmail || "";
+  const dailyLimit = Number(data.dailyLimitOverride) > 0 ? Number(data.dailyLimitOverride) : data.packagePlan === "paid" ? paidDailyGenerateLimit : freeDailyGenerateLimit;
 
   return {
     id: row.id,
     email,
+    packagePlan: data.packagePlan || "free",
+    dailyLimitOverride: data.dailyLimitOverride ?? null,
+    subscriptionStatus: data.subscriptionStatus || "active",
+    dailyLimit,
     activeBrand: activeBlueprint?.context?.brandName || latestHistory?.brand || "-",
     lastProvider: data.lastProvider || latestHistory?.provider || "-",
     lastModel: data.lastModel || latestHistory?.model || "-",
@@ -67,6 +74,55 @@ async function readAdminWorkspaces() {
   return JSON.parse(text || "[]");
 }
 
+async function verifiedRequesterEmail(req, body) {
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+  if (!token) return String(body.email || "").trim().toLowerCase();
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error("Sesi admin tidak valid. Login ulang.");
+  return String(data.email || "").trim().toLowerCase();
+}
+
+async function readWorkspaceById(workspaceId) {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?id=eq.${encodeURIComponent(workspaceId)}&select=data`, {
+    headers: supabaseHeaders(),
+  });
+  const rows = await response.json().catch(() => []);
+  if (!response.ok) throw new Error("Gagal membaca data user.");
+  return rows?.[0]?.data || {};
+}
+
+async function updateWorkspacePackage({ workspaceId, packagePlan, dailyLimitOverride }) {
+  if (!workspaceId) throw new Error("Workspace user belum valid.");
+  const cleanPlan = packagePlan === "paid" ? "paid" : "free";
+  const limitValue = Number(dailyLimitOverride);
+  const cleanLimit = Number.isFinite(limitValue) && limitValue > 0 ? Math.floor(limitValue) : null;
+  const current = await readWorkspaceById(workspaceId);
+  const payload = [
+    {
+      id: workspaceId,
+      data: {
+        ...current,
+        packagePlan: cleanPlan,
+        dailyLimitOverride: cleanLimit,
+        subscriptionStatus: cleanPlan === "paid" ? "paid" : "free",
+        updatedAt: new Date().toISOString(),
+      },
+    },
+  ];
+  const response = await fetch(`${supabaseUrl}/rest/v1/${supabaseTable}?on_conflict=id`, {
+    method: "POST",
+    headers: { ...supabaseHeaders(), Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error("Gagal update paket user.");
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     sendJson(res, 405, { error: "Method not allowed." });
@@ -75,9 +131,15 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = await parseBody(req);
-    const requesterEmail = String(body.email || "").trim().toLowerCase();
+    const requesterEmail = await verifiedRequesterEmail(req, body);
     if (!adminEmails.includes(requesterEmail)) {
       sendJson(res, 403, { error: "Dashboard admin hanya untuk akun admin." });
+      return;
+    }
+
+    if (body.action === "updatePackage") {
+      await updateWorkspacePackage(body);
+      sendJson(res, 200, { ok: true });
       return;
     }
 

@@ -48,6 +48,9 @@ module.exports = async function handler(req, res) {
         lastModel: body.lastModel || current.lastModel || "",
         lastGeneratedAt: body.lastGeneratedAt || current.lastGeneratedAt || null,
         lastUserEmail: body.lastUserEmail || current.lastUserEmail || "",
+        packagePlan: current.packagePlan || "free",
+        dailyLimitOverride: current.dailyLimitOverride ?? null,
+        subscriptionStatus: current.subscriptionStatus || "active",
       }, body.workspaceId);
       sendJson(res, 200, { ok: true });
       return;

@@ -12,6 +12,8 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabaseTable = process.env.SUPABASE_TABLE || "creator_app_state";
 const supabaseStateId = process.env.SUPABASE_STATE_ID || "creator-sat-set";
 const dailyGenerateLimit = Number(process.env.DAILY_GENERATE_LIMIT || 20);
+const freeDailyGenerateLimit = Number(process.env.FREE_DAILY_GENERATE_LIMIT || dailyGenerateLimit || 20);
+const paidDailyGenerateLimit = Number(process.env.PAID_DAILY_GENERATE_LIMIT || 200);
 const adminEmails = (process.env.ADMIN_EMAILS || "sedjatiecofarm@gmail.com")
   .split(",")
   .map((item) => item.trim().toLowerCase())
@@ -32,6 +34,9 @@ function defaultDb() {
     lastModel: "",
     lastGeneratedAt: null,
     lastUserEmail: "",
+    packagePlan: "free",
+    dailyLimitOverride: null,
+    subscriptionStatus: "active",
     updatedAt: null,
   };
 }
@@ -68,9 +73,15 @@ function requireLoggedInUser(body) {
 }
 
 function limitError(limit, used) {
-  const error = new Error(`Limit generate harian kamu sudah habis (${used}/${limit}). Coba lagi besok, atau gunakan akun admin.`);
+  const error = new Error(`Limit generate harian kamu sudah habis (${used}/${limit}). Coba lagi besok, atau upgrade paket.`);
   error.statusCode = 429;
   return error;
+}
+
+function planLimit(db = {}) {
+  const override = Number(db.dailyLimitOverride);
+  if (Number.isFinite(override) && override > 0) return override;
+  return db.packagePlan === "paid" ? paidDailyGenerateLimit : freeDailyGenerateLimit;
 }
 
 async function enforceDailyGenerateLimit(body) {
@@ -82,8 +93,9 @@ async function enforceDailyGenerateLimit(body) {
   const day = todayKey();
   const bucket = db.usage?.[day] || { total: 0, generate: 0, transcribe: 0 };
   const used = Number(bucket.generate || 0);
-  if (used >= dailyGenerateLimit) throw limitError(dailyGenerateLimit, used);
-  return { requester, usage: db.usage || {}, day, workspaceId };
+  const limit = planLimit(db);
+  if (used >= limit) throw limitError(limit, used);
+  return { requester, usage: db.usage || {}, day, workspaceId, limit };
 }
 
 async function recordServerGenerateUsage(limitState, result = {}, body = {}) {
@@ -125,8 +137,8 @@ async function recordServerGenerateUsage(limitState, result = {}, body = {}) {
   return {
     day: limitState.day,
     bucket,
-    limit: dailyGenerateLimit,
-    remaining: Math.max(dailyGenerateLimit - bucket.generate, 0),
+    limit: limitState.limit || dailyGenerateLimit,
+    remaining: Math.max((limitState.limit || dailyGenerateLimit) - bucket.generate, 0),
     admin: false,
   };
 }
