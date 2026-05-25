@@ -51,6 +51,44 @@ function summarizeWorkspace(row) {
   };
 }
 
+function mergeUserSummaries(users) {
+  const grouped = new Map();
+  for (const user of users) {
+    const key = String(user.email || user.id || "").trim().toLowerCase() || user.id;
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, { ...user, workspaceIds: [user.id] });
+      continue;
+    }
+
+    const isNewer = String(user.updatedAt || "").localeCompare(String(existing.updatedAt || "")) > 0;
+    const base = isNewer ? { ...existing, ...user } : existing;
+    grouped.set(key, {
+      ...base,
+      id: isNewer ? user.id : existing.id,
+      workspaceIds: [...new Set([...(existing.workspaceIds || [existing.id]), user.id])],
+      generateToday: Number(existing.generateToday || 0) + Number(user.generateToday || 0),
+      transcribeToday: Number(existing.transcribeToday || 0) + Number(user.transcribeToday || 0),
+      totalToday: Number(existing.totalToday || 0) + Number(user.totalToday || 0),
+      historyCount: Number(existing.historyCount || 0) + Number(user.historyCount || 0),
+      blueprintCount: Number(existing.blueprintCount || 0) + Number(user.blueprintCount || 0),
+      lastProvider:
+        String(user.lastGeneratedAt || "").localeCompare(String(existing.lastGeneratedAt || "")) > 0
+          ? user.lastProvider
+          : existing.lastProvider,
+      lastModel:
+        String(user.lastGeneratedAt || "").localeCompare(String(existing.lastGeneratedAt || "")) > 0
+          ? user.lastModel
+          : existing.lastModel,
+      lastGeneratedAt:
+        String(user.lastGeneratedAt || "").localeCompare(String(existing.lastGeneratedAt || "")) > 0
+          ? user.lastGeneratedAt
+          : existing.lastGeneratedAt,
+    });
+  }
+  return [...grouped.values()].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+}
+
 function supabaseHeaders() {
   return {
     apikey: supabaseKey,
@@ -144,9 +182,7 @@ module.exports = async function handler(req, res) {
     }
 
     const rows = await readAdminWorkspaces();
-    const users = rows
-      .map(summarizeWorkspace)
-      .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+    const users = mergeUserSummaries(rows.map(summarizeWorkspace));
     const latestAi = users
       .filter((user) => user.lastProvider && user.lastProvider !== "-" && user.lastGeneratedAt)
       .sort((a, b) => String(b.lastGeneratedAt || "").localeCompare(String(a.lastGeneratedAt || "")))[0] || null;
