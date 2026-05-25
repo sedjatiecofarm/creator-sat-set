@@ -28,6 +28,10 @@ function defaultDb() {
     activeBlueprintId: null,
     history: [],
     usage: {},
+    lastProvider: "",
+    lastModel: "",
+    lastGeneratedAt: null,
+    lastUserEmail: "",
     updatedAt: null,
   };
 }

@@ -14,6 +14,12 @@ module.exports = async function handler(req, res) {
         plans: body.plans || {},
         blueprints: body.blueprints || [],
         activeBlueprintId: body.activeBlueprintId ?? null,
+        history: Array.isArray(body.history) ? body.history.slice(0, 100) : [],
+        usage: body.usage || {},
+        lastProvider: body.lastProvider || "",
+        lastModel: body.lastModel || "",
+        lastGeneratedAt: body.lastGeneratedAt || null,
+        lastUserEmail: body.lastUserEmail || "",
       }, body.workspaceId);
       sendJson(res, 200, { ok: true });
       return;
