@@ -1259,8 +1259,12 @@ function renderAdminDashboard(data) {
   const totalGenerate = users.reduce((sum, user) => sum + Number(user.generateToday || 0), 0);
   const totalTranscribe = users.reduce((sum, user) => sum + Number(user.transcribeToday || 0), 0);
   const activeUsers = users.filter((user) => user.generateToday || user.transcribeToday).length;
-  const lastAiUser = users.find((user) => user.lastProvider && user.lastProvider !== "-");
-  const lastAiLabel = lastAiUser ? `${lastAiUser.lastProvider}${lastAiUser.lastModel && lastAiUser.lastModel !== "-" ? ` / ${lastAiUser.lastModel}` : ""}` : "-";
+  const lastAiUser =
+    data.latestAi ||
+    users
+      .filter((user) => user.lastProvider && user.lastProvider !== "-")
+      .sort((a, b) => String(b.lastGeneratedAt || "").localeCompare(String(a.lastGeneratedAt || "")))[0];
+  const lastAiLabel = lastAiUser ? `${lastAiUser.provider || lastAiUser.lastProvider}${(lastAiUser.model || lastAiUser.lastModel) && (lastAiUser.model || lastAiUser.lastModel) !== "-" ? ` / ${lastAiUser.model || lastAiUser.lastModel}` : ""}` : "-";
 
   $("#adminSummary").innerHTML = [
     ["User tersimpan", users.length],

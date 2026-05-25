@@ -243,7 +243,7 @@ async function handleSaveDb(req, res) {
       blueprints: body.blueprints || current.blueprints || [],
       activeBlueprintId: body.activeBlueprintId ?? current.activeBlueprintId ?? null,
       history: Array.isArray(body.history) ? body.history.slice(0, 100) : current.history || [],
-      usage: body.usage || current.usage || {},
+      usage: body.usage && Object.keys(body.usage).length ? body.usage : current.usage || {},
       lastProvider: body.lastProvider || current.lastProvider || "",
       lastModel: body.lastModel || current.lastModel || "",
       lastGeneratedAt: body.lastGeneratedAt || current.lastGeneratedAt || null,
