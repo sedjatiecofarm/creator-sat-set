@@ -1323,7 +1323,7 @@ function renderAdminDashboard(data) {
       const generatedAt = user.lastGeneratedAt ? new Date(user.lastGeneratedAt).toLocaleString("id-ID") : "-";
       return `
         <tr data-admin-user="${escapeHtml(user.id)}">
-          <td><strong>${escapeHtml(user.email || "-")}</strong><span>${escapeHtml(user.id)}</span></td>
+          <td><strong>${escapeHtml(user.email || "-")}</strong><span>${escapeHtml(user.workspaceIds?.length > 1 ? `${user.workspaceIds.length} workspace - terbaru: ${user.id}` : user.id)}</span></td>
           <td>
             <select class="admin-select" data-package-plan>
               <option value="free"${user.packagePlan === "paid" ? "" : " selected"}>Gratis</option>

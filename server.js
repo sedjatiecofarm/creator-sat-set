@@ -339,6 +339,34 @@ function summarizeWorkspace(row) {
   };
 }
 
+function mergeUserSummaries(users) {
+  const grouped = new Map();
+  for (const user of users) {
+    const key = String(user.email || user.id || "").trim().toLowerCase() || user.id;
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, { ...user, workspaceIds: [user.id] });
+      continue;
+    }
+    const isNewer = String(user.updatedAt || "").localeCompare(String(existing.updatedAt || "")) > 0;
+    const newerAi = String(user.lastGeneratedAt || "").localeCompare(String(existing.lastGeneratedAt || "")) > 0;
+    grouped.set(key, {
+      ...(isNewer ? { ...existing, ...user } : existing),
+      id: isNewer ? user.id : existing.id,
+      workspaceIds: [...new Set([...(existing.workspaceIds || [existing.id]), user.id])],
+      generateToday: Number(existing.generateToday || 0) + Number(user.generateToday || 0),
+      transcribeToday: Number(existing.transcribeToday || 0) + Number(user.transcribeToday || 0),
+      totalToday: Number(existing.totalToday || 0) + Number(user.totalToday || 0),
+      historyCount: Number(existing.historyCount || 0) + Number(user.historyCount || 0),
+      blueprintCount: Number(existing.blueprintCount || 0) + Number(user.blueprintCount || 0),
+      lastProvider: newerAi ? user.lastProvider : existing.lastProvider,
+      lastModel: newerAi ? user.lastModel : existing.lastModel,
+      lastGeneratedAt: newerAi ? user.lastGeneratedAt : existing.lastGeneratedAt,
+    });
+  }
+  return [...grouped.values()].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+}
+
 async function updateWorkspacePackage({ workspaceId, packagePlan, dailyLimitOverride }) {
   const current = await readDb(workspaceId);
   const limitValue = Number(dailyLimitOverride);
@@ -369,9 +397,7 @@ async function handleAdmin(req, res) {
     }
 
     const rows = await readSupabaseWorkspaces();
-    const users = rows
-      .map(summarizeWorkspace)
-      .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+    const users = mergeUserSummaries(rows.map(summarizeWorkspace));
     sendJson(res, 200, {
       today: todayKey(),
       users,
