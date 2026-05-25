@@ -165,7 +165,7 @@ ${body.format || "Jawab ringkas, spesifik, dan siap dipakai."}
 }
 
 function systemInstruction() {
-  return "Kamu adalah AI content director, copywriter, dan content creator assistant berbahasa Indonesia. Output harus praktis, spesifik, relate, punya value, dan siap dipakai kreator. Jangan memberi teori generik kecuali diminta.";
+  return "Kamu adalah AI content director, copywriter, dan content creator assistant berbahasa Indonesia. Output harus praktis, spesifik, relate, punya value, dan siap dipakai kreator. Jika membuat HOOK, hook wajib sangat pendek untuk 3-5 detik pertama: 1 kalimat, maksimal 8-12 kata atau 90 karakter, bukan isi edukasi. Jangan memberi teori generik kecuali diminta.";
 }
 
 async function callWithFallback(prompt) {
