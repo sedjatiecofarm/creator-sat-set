@@ -171,6 +171,9 @@ const partLabels = {
   cta: "CTA",
 };
 
+const hookRule =
+  "Aturan hook: hook adalah 0-5 detik pertama. Wajib 1 kalimat pendek, maksimal 8-12 kata atau 90 karakter, langsung memancing rasa ingin tahu/emosi. Jangan gabungkan hook dengan isi edukasi, jangan pakai kalimat majemuk panjang.";
+
 const funnelMeta = {
   tofu: {
     name: "AWARENESS",
@@ -252,6 +255,11 @@ function cleanIdea(topic) {
     .trim();
 }
 
+function hookSubject(topic) {
+  const words = cleanIdea(topic).split(" ").filter(Boolean);
+  return words.slice(0, 4).join(" ") || "ini";
+}
+
 function scriptLine(text) {
   const match = text.match(/NASKAH:\s*"([^"]+)"/s);
   if (match) return match[1].trim();
@@ -297,9 +305,9 @@ async function generateFullScript(topic, parts, draftTarget, trigger) {
     const text = await askAI({
       topic: `${cleanTopic}\n\nSETTING SCRIPT\n${scriptSettingsPrompt()}`,
       instruction:
-        "Buat satu draft script lengkap. Kamu berperan sebagai content director, copywriter, dan creator assistant. Script harus mengikuti blueprint brand aktif, target market, keresahan audiens, jenis konten, durasi target, platform, dan funnel bila topik memuat Awareness/Consideration/Conversion. Jangan memberi opsi, langsung buat draft terbaik.",
+        `Buat satu draft script lengkap. Kamu berperan sebagai content director, copywriter, dan creator assistant. Script harus mengikuti blueprint brand aktif, target market, keresahan audiens, jenis konten, durasi target, platform, dan funnel bila topik memuat Awareness/Consideration/Conversion. Jangan memberi opsi, langsung buat draft terbaik. ${hookRule}`,
       format:
-        "Format wajib persis dengan heading ini:\nHOOK\n...\n\nFORESHADOW\n...\n\nISI\n...\n\nCTA\n...\n\nSesuaikan panjang script dengan durasi target. Untuk Story buat lebih ringan dan direct. Untuk Carousel buat alur per slide. Untuk Feed buat caption/isi yang padat. Untuk Reels/TikTok/Shorts buat ritme video pendek. Gunakan Bahasa Indonesia yang natural, relate, bernilai, dan siap dipakai. Jangan tambahkan catatan di luar empat heading itu.",
+        "Format wajib persis dengan heading ini:\nHOOK\n...\n\nFORESHADOW\n...\n\nISI\n...\n\nCTA\n...\n\nHOOK wajib 1 kalimat pendek untuk 3-5 detik pertama, maksimal 8-12 kata atau 90 karakter. HOOK tidak boleh berisi penjelasan edukasi; simpan edukasi di ISI. Sesuaikan panjang script dengan durasi target. Untuk Story buat lebih ringan dan direct. Untuk Carousel buat alur per slide. Untuk Feed buat caption/isi yang padat. Untuk Reels/TikTok/Shorts buat ritme video pendek. Gunakan Bahasa Indonesia yang natural, relate, bernilai, dan siap dipakai. Jangan tambahkan catatan di luar empat heading itu.",
     });
     const parsed = parseFullScript(text);
     parts.hook = parsed.hook || "-";
@@ -412,7 +420,7 @@ function formatInline(text) {
 function generationInstruction(part) {
   const map = {
     hook:
-      "Buat 5 pilihan hook untuk konten. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Berikan variasi tipe hook: Question, Fact/Stats, Controversial, Storytelling, Comedy, Negative/Fear-based, How-to, atau Visual. Setiap opsi wajib punya TIPE, ANGLE, NASKAH, ARAH VISUAL, dan VALUE. Jangan generik. Jangan pakai pembuka/penutup di luar opsi.",
+      `Buat 5 pilihan hook untuk konten. ${hookRule} Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Berikan variasi tipe hook: Question, Fact/Stats, Controversial, Storytelling, Comedy, Negative/Fear-based, How-to, atau Visual. Setiap opsi wajib punya TIPE, ANGLE, NASKAH, ARAH VISUAL, dan VALUE. Bagian NASKAH khusus hook wajib pendek, bukan paragraf, bukan foreshadow, dan bukan isi. Kalau tipe Visual, NASKAH tetap pendek; detail gerakan/objek taruh di ARAH VISUAL. Jangan generik. Jangan pakai pembuka/penutup di luar opsi.`,
     foreshadow:
       "Buat 3 pilihan foreshadow/janji konten. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Foreshadow harus membuat audiens punya alasan lanjut menonton/membaca. Setiap opsi wajib punya NASKAH, ARAH CERITA, dan VALUE. Jangan pakai pembuka/penutup di luar opsi.",
     body:
@@ -427,14 +435,14 @@ const generators = {
   hook: (topic) => {
     const v = valuePromise(topic);
     const f = activeFunnelFor(topic);
-    const idea = cleanIdea(topic);
+    const subject = hookSubject(topic);
     return [
-      `TIPE: Question Hook\nFUNNEL JOB: ${f.job}\nANGLE: Menyasar keresahan audiens dan membuat mereka merasa "ini masalah gue".\nNASKAH: "Kalau lihat ${idea}, kamu yakin sudah tahu mana yang benar-benar layak dan mana yang cuma kelihatan meyakinkan?"\nARAH VISUAL: Buka dengan dua contoh berdampingan, tahan 1 detik, lalu beri teks pertanyaan besar.\nVALUE: Audiens terdorong berhenti scroll karena pertanyaannya dekat dengan rasa ragu mereka.`,
-      `TIPE: Negative / Fear-based Hook\nFUNNEL JOB: ${f.job}\nANGLE: Mencegah audiens melakukan kesalahan sebelum mengambil keputusan.\nNASKAH: "Jangan ambil keputusan soal ${idea} sebelum kamu cek tanda ini. Kelihatan bagus belum tentu aman."\nARAH VISUAL: Close-up objek utama, lalu cut cepat ke detail kecil yang sering dilewatkan.\nVALUE: Audiens merasa ada risiko yang harus dicegah, bukan sekadar informasi biasa.`,
-      `TIPE: Fact / Credibility Hook\nFUNNEL JOB: ${f.job}\nANGLE: Membuka dengan fakta lapangan agar brand terlihat paham proses.\nNASKAH: "Di lapangan, keputusan yang salah sering bukan karena kurang niat, tapi karena cuma melihat ${idea} dari satu sisi."\nARAH VISUAL: Tampilkan proses nyata, checklist, atau suasana kerja yang memperkuat kredibilitas.\nVALUE: Membangun trust karena edukasi terasa berasal dari pengalaman, bukan teori kosong.`,
-      `TIPE: Storytelling Hook\nFUNNEL JOB: ${f.job}\nANGLE: Cerita pendek yang relatable untuk membuat edukasi tidak terasa menggurui.\nNASKAH: "Pernah ada yang yakin pilihannya sudah aman, karena dari luar terlihat bagus. Setelah dicek lebih dekat, masalahnya justru ada di detail kecil yang dia lewatkan."\nARAH VISUAL: Mulai dari cerita kasus, lalu tampilkan detail yang jadi pelajaran.\nVALUE: Cerita membantu ${v.audience} belajar tanpa merasa disalahkan.`,
-      `TIPE: Controversial Hook\nFUNNEL JOB: ${f.job}\nANGLE: Melawan asumsi umum agar audiens penasaran.\nNASKAH: "Yang paling menarik dilihat belum tentu paling layak dipilih. Untuk ${idea}, bukti kecil sering lebih penting dari tampilan besar."\nARAH VISUAL: Tampilkan contoh yang tampak menarik, lalu beri teks "belum tentu".\nVALUE: Memancing perhatian karena audiens merasa keyakinannya ditantang.`,
-      `TIPE: How-to Hook\nFUNNEL JOB: ${f.job}\nANGLE: Menawarkan pegangan praktis yang bisa langsung dipakai.\nNASKAH: "Ini cara sederhana membaca ${idea}, supaya kamu tidak cuma nebak dari tampilan luar."\nARAH VISUAL: Gunakan 3 poin di layar: lihat, cek, pastikan.\nVALUE: Audiens tahu mereka akan pulang dengan checklist yang berguna.`,
+      `TIPE: Question Hook\nFUNNEL JOB: ${f.job}\nANGLE: Menyasar keresahan audiens dan membuat mereka merasa "ini masalah gue".\nNASKAH: "Yakin ${subject} benar-benar aman?"\nARAH VISUAL: Buka dengan dua contoh berdampingan, tahan 1 detik, lalu beri teks pertanyaan besar.\nVALUE: Audiens terdorong berhenti scroll karena pertanyaannya dekat dengan rasa ragu mereka.`,
+      `TIPE: Negative / Fear-based Hook\nFUNNEL JOB: ${f.job}\nANGLE: Mencegah audiens melakukan kesalahan sebelum mengambil keputusan.\nNASKAH: "Jangan pilih sebelum cek tanda ini."\nARAH VISUAL: Close-up objek utama, lalu cut cepat ke detail kecil yang sering dilewatkan.\nVALUE: Audiens merasa ada risiko yang harus dicegah, bukan sekadar informasi biasa.`,
+      `TIPE: Fact / Credibility Hook\nFUNNEL JOB: ${f.job}\nANGLE: Membuka dengan fakta lapangan agar brand terlihat paham proses.\nNASKAH: "Kesalahan mahal sering dimulai dari satu asumsi."\nARAH VISUAL: Tampilkan proses nyata, checklist, atau suasana kerja yang memperkuat kredibilitas.\nVALUE: Membangun trust karena edukasi terasa berasal dari pengalaman, bukan teori kosong.`,
+      `TIPE: Storytelling Hook\nFUNNEL JOB: ${f.job}\nANGLE: Cerita pendek yang relatable untuk membuat edukasi tidak terasa menggurui.\nNASKAH: "Dulu yakin aman, ternyata detail kecilnya salah."\nARAH VISUAL: Mulai dari cerita kasus, lalu tampilkan detail yang jadi pelajaran.\nVALUE: Cerita membantu ${v.audience} belajar tanpa merasa disalahkan.`,
+      `TIPE: Controversial Hook\nFUNNEL JOB: ${f.job}\nANGLE: Melawan asumsi umum agar audiens penasaran.\nNASKAH: "Yang menarik belum tentu layak dipilih."\nARAH VISUAL: Tampilkan contoh yang tampak menarik, lalu beri teks "belum tentu".\nVALUE: Memancing perhatian karena audiens merasa keyakinannya ditantang.`,
+      `TIPE: How-to Hook\nFUNNEL JOB: ${f.job}\nANGLE: Menawarkan pegangan praktis yang bisa langsung dipakai.\nNASKAH: "Ini cara cek tanpa cuma menebak."\nARAH VISUAL: Gunakan 3 poin di layar: lihat, cek, pastikan.\nVALUE: Audiens tahu mereka akan pulang dengan checklist yang berguna.`,
     ];
   },
   foreshadow: (topic) => {
@@ -999,7 +1007,7 @@ async function generateOptions(part, topic, container, parts, draftTarget, trigg
       topic: `${cleanTopic}\n\nSETTING SCRIPT\n${scriptSettingsPrompt()}`,
       instruction: generationInstruction(part),
       format:
-        "WAJIB hanya keluarkan daftar opsi, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3: dan seterusnya.\n\nFormat per opsi:\nOPSI 1:\nTIPE/CTA: ...\nFORMAT: jenis konten, durasi, platform\nANGLE: ...\nNASKAH: \"...\"\nARAH VISUAL: ...\nVALUE/TUJUAN: ...\n\nBuat output dalam Bahasa Indonesia, spesifik untuk brand, target market, jenis konten, durasi, dan platform.",
+        `WAJIB hanya keluarkan daftar opsi, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3: dan seterusnya.\n\nFormat per opsi:\nOPSI 1:\nTIPE/CTA: ...\nFORMAT: jenis konten, durasi, platform\nANGLE: ...\nNASKAH: \"...\"\nARAH VISUAL: ...\nVALUE/TUJUAN: ...\n\nJika membuat Hook, NASKAH wajib 1 kalimat pendek maksimal 8-12 kata atau 90 karakter untuk 0-5 detik pertama. Jangan masukkan penjelasan edukasi di hook. Buat output dalam Bahasa Indonesia, spesifik untuk brand, target market, jenis konten, durasi, dan platform.`,
     });
     options = splitAIOptions(text);
   } catch (error) {
@@ -1609,9 +1617,9 @@ $("#remixScript").addEventListener("click", async (event) => {
     $("#remixResult").value = await askAI({
       topic: `TOPIK BARU: ${topic}\n\nTRANSKRIP REFERENSI:\n${$("#videoScript").value}`,
       instruction:
-        "Remix transkrip video referensi menjadi script baru sesuai topik baru, brand, target market, dan keresahan audiens. Jangan plagiat. Ambil pola komunikasi, ritme, hook, dan alur persuasi, bukan kata-kata mentahnya.",
+        `Remix transkrip video referensi menjadi script baru sesuai topik baru, brand, target market, dan keresahan audiens. Jangan plagiat. Ambil pola komunikasi, ritme, hook, dan alur persuasi, bukan kata-kata mentahnya. ${hookRule}`,
       format:
-        "Format script final: HOOK, FORESHADOW, ISI, CTA, ARAH VISUAL, CATATAN ADAPTASI. Buat siap dipakai untuk video pendek.",
+        "Format script final: HOOK, FORESHADOW, ISI, CTA, ARAH VISUAL, CATATAN ADAPTASI. HOOK wajib 1 kalimat pendek maksimal 8-12 kata untuk 3-5 detik pertama. Buat siap dipakai untuk video pendek.",
     });
   } catch (error) {
     $("#remixResult").value = friendlyAIError(error.message);
