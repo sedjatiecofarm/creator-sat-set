@@ -605,7 +605,7 @@ textarea:focus,
 
 .admin-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 1120px;
   border-collapse: collapse;
 }
 
@@ -628,6 +628,25 @@ textarea:focus,
   color: var(--muted);
   font-size: 12px;
   margin-top: 4px;
+}
+
+.admin-select,
+.admin-limit-input {
+  min-height: 34px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbf5;
+  color: var(--ink);
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.admin-limit-control {
+  display: grid;
+  grid-template-columns: minmax(70px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .saved-profile {

@@ -1233,24 +1233,58 @@ function renderHistory() {
 
 async function loadAdminDashboard() {
   if (!isAdminUser()) {
-    $("#adminRows").innerHTML = '<tr><td colspan="8">Dashboard admin hanya untuk akun admin.</td></tr>';
+    $("#adminRows").innerHTML = '<tr><td colspan="10">Dashboard admin hanya untuk akun admin.</td></tr>';
     $("#adminSummary").innerHTML = "";
     return;
   }
 
-  $("#adminRows").innerHTML = '<tr><td colspan="8">Memuat data admin...</td></tr>';
+  $("#adminRows").innerHTML = '<tr><td colspan="10">Memuat data admin...</td></tr>';
   try {
+    const session = authState.client ? (await authState.client.auth.getSession()).data.session : null;
     const response = await fetch(`${API_BASE}/api/admin`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
       body: JSON.stringify({ email: authState.user.email }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error([data.error, data.detail].filter(Boolean).join(" - ") || "Gagal membaca data admin.");
     renderAdminDashboard(data);
   } catch (error) {
-    $("#adminRows").innerHTML = `<tr><td colspan="8">Gagal membaca data admin: ${escapeHtml(error.message)}</td></tr>`;
+    $("#adminRows").innerHTML = `<tr><td colspan="10">Gagal membaca data admin: ${escapeHtml(error.message)}</td></tr>`;
     $("#adminSummary").innerHTML = "";
+  }
+}
+
+async function updateAdminPackage(workspaceId, packagePlan, dailyLimitOverride, button) {
+  if (!isAdminUser()) return;
+  setLoading(button, true, "Simpan");
+  try {
+    const session = authState.client ? (await authState.client.auth.getSession()).data.session : null;
+    const response = await fetch(`${API_BASE}/api/admin`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({
+        email: authState.user.email,
+        action: "updatePackage",
+        workspaceId,
+        packagePlan,
+        dailyLimitOverride,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Gagal update paket.");
+    showToast("Paket user berhasil diupdate.");
+    await loadAdminDashboard();
+  } catch (error) {
+    showToast(error.message || "Gagal update paket user.");
+  } finally {
+    setLoading(button, false, "Simpan");
   }
 }
 
@@ -1259,6 +1293,7 @@ function renderAdminDashboard(data) {
   const totalGenerate = users.reduce((sum, user) => sum + Number(user.generateToday || 0), 0);
   const totalTranscribe = users.reduce((sum, user) => sum + Number(user.transcribeToday || 0), 0);
   const activeUsers = users.filter((user) => user.generateToday || user.transcribeToday).length;
+  const paidUsers = users.filter((user) => user.packagePlan === "paid").length;
   const lastAiUser =
     data.latestAi ||
     users
@@ -1271,13 +1306,14 @@ function renderAdminDashboard(data) {
     ["Aktif hari ini", activeUsers],
     ["Generate hari ini", totalGenerate],
     ["Transkripsi hari ini", totalTranscribe],
+    ["User berbayar", paidUsers],
     ["AI aktif terakhir", lastAiLabel],
   ]
     .map(([label, value]) => `<div class="usage-card"><strong>${value}</strong><span>${label}</span></div>`)
     .join("");
 
   if (!users.length) {
-    $("#adminRows").innerHTML = '<tr><td colspan="8">Belum ada data user.</td></tr>';
+    $("#adminRows").innerHTML = '<tr><td colspan="10">Belum ada data user.</td></tr>';
     return;
   }
 
@@ -1286,8 +1322,21 @@ function renderAdminDashboard(data) {
       const date = user.updatedAt ? new Date(user.updatedAt).toLocaleString("id-ID") : "-";
       const generatedAt = user.lastGeneratedAt ? new Date(user.lastGeneratedAt).toLocaleString("id-ID") : "-";
       return `
-        <tr>
+        <tr data-admin-user="${escapeHtml(user.id)}">
           <td><strong>${escapeHtml(user.email || "-")}</strong><span>${escapeHtml(user.id)}</span></td>
+          <td>
+            <select class="admin-select" data-package-plan>
+              <option value="free"${user.packagePlan === "paid" ? "" : " selected"}>Gratis</option>
+              <option value="paid"${user.packagePlan === "paid" ? " selected" : ""}>Berbayar</option>
+            </select>
+          </td>
+          <td>
+            <div class="admin-limit-control">
+              <input class="admin-limit-input" data-package-limit type="number" min="1" placeholder="${Number(user.dailyLimit || 0)}" value="${user.dailyLimitOverride ? Number(user.dailyLimitOverride) : ""}" />
+              <button class="tiny-btn" data-package-save type="button">Simpan</button>
+            </div>
+            <span>Aktif: ${Number(user.dailyLimit || 0)} generate/hari</span>
+          </td>
           <td>${escapeHtml(user.activeBrand || "-")}</td>
           <td>${escapeHtml(user.lastProvider || "-")}<span>${escapeHtml(user.lastModel || "-")}</span><span>${escapeHtml(generatedAt)}</span></td>
           <td>${Number(user.generateToday || 0)}</td>
@@ -1299,6 +1348,18 @@ function renderAdminDashboard(data) {
       `;
     })
     .join("");
+
+  $$("[data-admin-user]").forEach((row) => {
+    const saveButton = row.querySelector("[data-package-save]");
+    saveButton?.addEventListener("click", () => {
+      updateAdminPackage(
+        row.dataset.adminUser,
+        row.querySelector("[data-package-plan]")?.value || "free",
+        row.querySelector("[data-package-limit]")?.value || "",
+        saveButton,
+      );
+    });
+  });
 }
 
 function activateBlueprint(id) {

@@ -22,6 +22,8 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabaseTable = process.env.SUPABASE_TABLE || "creator_app_state";
 const supabaseStateId = process.env.SUPABASE_STATE_ID || "creator-sat-set";
 const dailyGenerateLimit = Number(process.env.DAILY_GENERATE_LIMIT || 20);
+const freeDailyGenerateLimit = Number(process.env.FREE_DAILY_GENERATE_LIMIT || dailyGenerateLimit || 20);
+const paidDailyGenerateLimit = Number(process.env.PAID_DAILY_GENERATE_LIMIT || 200);
 const adminEmails = (process.env.ADMIN_EMAILS || "sedjatiecofarm@gmail.com")
   .split(",")
   .map((item) => item.trim().toLowerCase())
@@ -122,6 +124,9 @@ function defaultDb() {
     lastModel: "",
     lastGeneratedAt: null,
     lastUserEmail: "",
+    packagePlan: "free",
+    dailyLimitOverride: null,
+    subscriptionStatus: "active",
     updatedAt: null,
   };
 }
@@ -194,13 +199,20 @@ async function enforceDailyGenerateLimit(body) {
   const db = await readDb(requester.workspaceId);
   const bucket = db.usage?.[day] || { total: 0, generate: 0, transcribe: 0 };
   const used = Number(bucket.generate || 0);
-  if (used >= dailyGenerateLimit) {
-    const error = new Error(`Limit generate harian kamu sudah habis (${used}/${dailyGenerateLimit}). Coba lagi besok, atau gunakan akun admin.`);
+  const limit = planLimit(db);
+  if (used >= limit) {
+    const error = new Error(`Limit generate harian kamu sudah habis (${used}/${limit}). Coba lagi besok, atau upgrade paket.`);
     error.statusCode = 429;
     throw error;
   }
 
-  return { skipped: false, day, workspaceId: requester.workspaceId, requester };
+  return { skipped: false, day, workspaceId: requester.workspaceId, requester, limit };
+}
+
+function planLimit(db = {}) {
+  const override = Number(db.dailyLimitOverride);
+  if (Number.isFinite(override) && override > 0) return override;
+  return db.packagePlan === "paid" ? paidDailyGenerateLimit : freeDailyGenerateLimit;
 }
 
 async function recordServerGenerateUsage(limitState, result = {}, body = {}) {
@@ -241,8 +253,8 @@ async function recordServerGenerateUsage(limitState, result = {}, body = {}) {
   return {
     day: limitState.day,
     bucket,
-    limit: dailyGenerateLimit,
-    remaining: Math.max(dailyGenerateLimit - bucket.generate, 0),
+    limit: limitState.limit || dailyGenerateLimit,
+    remaining: Math.max((limitState.limit || dailyGenerateLimit) - bucket.generate, 0),
     admin: false,
   };
 }
@@ -289,6 +301,9 @@ async function handleSaveDb(req, res) {
       lastModel: body.lastModel || current.lastModel || "",
       lastGeneratedAt: body.lastGeneratedAt || current.lastGeneratedAt || null,
       lastUserEmail: body.lastUserEmail || current.lastUserEmail || "",
+      packagePlan: current.packagePlan || "free",
+      dailyLimitOverride: current.dailyLimitOverride ?? null,
+      subscriptionStatus: current.subscriptionStatus || "active",
     }, workspaceId);
     sendJson(res, 200, { ok: true });
   } catch (error) {
@@ -302,10 +317,15 @@ function summarizeWorkspace(row) {
   const today = data.usage?.[day] || { total: 0, generate: 0, transcribe: 0 };
   const activeBlueprint = (data.blueprints || []).find((item) => item.id === data.activeBlueprintId);
   const latestHistory = (data.history || [])[0];
+  const dailyLimit = planLimit(data);
 
   return {
     id: row.id,
     email: data.lastUserEmail || latestHistory?.userEmail || data.userEmail || "",
+    packagePlan: data.packagePlan || "free",
+    dailyLimitOverride: data.dailyLimitOverride ?? null,
+    subscriptionStatus: data.subscriptionStatus || "active",
+    dailyLimit,
     activeBrand: activeBlueprint?.context?.brandName || latestHistory?.brand || "-",
     lastProvider: data.lastProvider || latestHistory?.provider || "-",
     lastModel: data.lastModel || latestHistory?.model || "-",
@@ -319,12 +339,32 @@ function summarizeWorkspace(row) {
   };
 }
 
+async function updateWorkspacePackage({ workspaceId, packagePlan, dailyLimitOverride }) {
+  const current = await readDb(workspaceId);
+  const limitValue = Number(dailyLimitOverride);
+  await writeDb(
+    {
+      ...current,
+      packagePlan: packagePlan === "paid" ? "paid" : "free",
+      dailyLimitOverride: Number.isFinite(limitValue) && limitValue > 0 ? Math.floor(limitValue) : null,
+      subscriptionStatus: packagePlan === "paid" ? "paid" : "free",
+    },
+    workspaceId,
+  );
+}
+
 async function handleAdmin(req, res) {
   try {
     const body = JSON.parse(await readBody(req));
     const requesterEmail = String(body.email || "").trim().toLowerCase();
     if (!adminEmails.includes(requesterEmail)) {
       sendJson(res, 403, { error: "Dashboard admin hanya untuk akun admin." });
+      return;
+    }
+
+    if (body.action === "updatePackage") {
+      await updateWorkspacePackage(body);
+      sendJson(res, 200, { ok: true });
       return;
     }
 
