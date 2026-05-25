@@ -1256,11 +1256,12 @@ function renderAdminDashboard(data) {
   $("#adminRows").innerHTML = users
     .map((user) => {
       const date = user.updatedAt ? new Date(user.updatedAt).toLocaleString("id-ID") : "-";
+      const generatedAt = user.lastGeneratedAt ? new Date(user.lastGeneratedAt).toLocaleString("id-ID") : "-";
       return `
         <tr>
           <td><strong>${escapeHtml(user.email || "-")}</strong><span>${escapeHtml(user.id)}</span></td>
           <td>${escapeHtml(user.activeBrand || "-")}</td>
-          <td>${escapeHtml(user.lastProvider || "-")}<span>${escapeHtml(user.lastModel || "-")}</span></td>
+          <td>${escapeHtml(user.lastProvider || "-")}<span>${escapeHtml(user.lastModel || "-")}</span><span>${escapeHtml(generatedAt)}</span></td>
           <td>${Number(user.generateToday || 0)}</td>
           <td>${Number(user.transcribeToday || 0)}</td>
           <td>${Number(user.blueprintCount || 0)}</td>

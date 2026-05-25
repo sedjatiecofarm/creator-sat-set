@@ -196,10 +196,10 @@ async function enforceDailyGenerateLimit(body) {
     throw error;
   }
 
-  return { skipped: false, day, workspaceId: requester.workspaceId };
+  return { skipped: false, day, workspaceId: requester.workspaceId, requester };
 }
 
-async function recordServerGenerateUsage(limitState) {
+async function recordServerGenerateUsage(limitState, result = {}) {
   if (!limitState) return null;
   if (limitState.skipped) return { day: limitState.day, limit: null, remaining: null, admin: true };
 
@@ -209,7 +209,17 @@ async function recordServerGenerateUsage(limitState) {
   bucket.total = Number(bucket.total || 0) + 1;
   bucket.generate = Number(bucket.generate || 0) + 1;
   usage[limitState.day] = bucket;
-  await writeDb({ ...db, usage }, limitState.workspaceId);
+  await writeDb(
+    {
+      ...db,
+      usage,
+      lastProvider: result.provider || db.lastProvider || "",
+      lastModel: result.model || db.lastModel || "",
+      lastGeneratedAt: new Date().toISOString(),
+      lastUserEmail: limitState.requester?.email || db.lastUserEmail || "",
+    },
+    limitState.workspaceId,
+  );
   return {
     day: limitState.day,
     bucket,
@@ -246,10 +256,11 @@ function summarizeWorkspace(row) {
 
   return {
     id: row.id,
-    email: latestHistory?.userEmail || data.userEmail || "",
+    email: data.lastUserEmail || latestHistory?.userEmail || data.userEmail || "",
     activeBrand: activeBlueprint?.context?.brandName || latestHistory?.brand || "-",
-    lastProvider: latestHistory?.provider || "-",
-    lastModel: latestHistory?.model || "-",
+    lastProvider: data.lastProvider || latestHistory?.provider || "-",
+    lastModel: data.lastModel || latestHistory?.model || "-",
+    lastGeneratedAt: data.lastGeneratedAt || latestHistory?.createdAt || null,
     generateToday: Number(today.generate || 0),
     transcribeToday: Number(today.transcribe || 0),
     totalToday: Number(today.total || 0),
@@ -379,7 +390,7 @@ async function handleGenerate(req, res) {
     const limitState = await enforceDailyGenerateLimit(body);
     const prompt = buildPrompt(body);
     const result = await callWithFallback(prompt);
-    const usage = await recordServerGenerateUsage(limitState);
+    const usage = await recordServerGenerateUsage(limitState, result);
     sendJson(res, 200, { ...result, usage });
   } catch (error) {
     sendJson(res, error.statusCode || 500, { error: error.message || "Terjadi error di server AI." });
