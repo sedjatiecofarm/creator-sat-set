@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
     const limitState = await enforceDailyGenerateLimit(body);
     const prompt = buildPrompt(body);
     const result = await callWithFallback(prompt);
-    const usage = await recordServerGenerateUsage(limitState, result);
+    const usage = await recordServerGenerateUsage(limitState, result, body);
     sendJson(res, 200, { ...result, usage });
   } catch (error) {
     sendJson(res, error.statusCode || 500, { error: error.message || "Terjadi error di API generate." });

@@ -86,7 +86,7 @@ async function enforceDailyGenerateLimit(body) {
   return { requester, usage: db.usage || {}, day, workspaceId };
 }
 
-async function recordServerGenerateUsage(limitState, result = {}) {
+async function recordServerGenerateUsage(limitState, result = {}, body = {}) {
   if (!limitState) return null;
   if (limitState.skipped) {
     return { day: limitState.day, limit: null, remaining: null, admin: true };
@@ -97,13 +97,27 @@ async function recordServerGenerateUsage(limitState, result = {}) {
   bucket.total = Number(bucket.total || 0) + 1;
   bucket.generate = Number(bucket.generate || 0) + 1;
   usage[limitState.day] = bucket;
+  const createdAt = new Date().toISOString();
+  const history = Array.isArray(db.history) ? db.history.slice(0, 100) : [];
+  history.unshift({
+    id: `server-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: "Generate AI",
+    input: String(body.topic || "").slice(0, 900),
+    output: String(result.text || "").slice(0, 4000),
+    provider: result.provider || "-",
+    model: result.model || "-",
+    brand: body.context?.brandName || "",
+    userEmail: limitState.requester?.email || "",
+    createdAt,
+  });
   await writeSupabaseDb(
     {
       ...db,
       usage,
+      history: history.slice(0, 100),
       lastProvider: result.provider || db.lastProvider || "",
       lastModel: result.model || db.lastModel || "",
-      lastGeneratedAt: new Date().toISOString(),
+      lastGeneratedAt: createdAt,
       lastUserEmail: limitState.requester?.email || db.lastUserEmail || "",
     },
     limitState.workspaceId,

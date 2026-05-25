@@ -12,12 +12,20 @@ function todayKey() {
   return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+function jakartaDay(value) {
+  if (!value) return "";
+  return new Date(new Date(value).getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 function summarizeWorkspace(row) {
   const data = row.data || {};
   const day = todayKey();
   const today = data.usage?.[day] || { total: 0, generate: 0, transcribe: 0 };
+  const history = Array.isArray(data.history) ? data.history : [];
   const activeBlueprint = (data.blueprints || []).find((item) => item.id === data.activeBlueprintId);
-  const latestHistory = (data.history || [])[0];
+  const latestHistory = history[0];
+  const generateFromHistory = history.filter((item) => !/transkripsi/i.test(item.type || "") && jakartaDay(item.createdAt) === day).length;
+  const transcribeFromHistory = history.filter((item) => /transkripsi/i.test(item.type || "") && jakartaDay(item.createdAt) === day).length;
   const email = data.lastUserEmail || latestHistory?.userEmail || data.userEmail || "";
 
   return {
@@ -27,10 +35,10 @@ function summarizeWorkspace(row) {
     lastProvider: data.lastProvider || latestHistory?.provider || "-",
     lastModel: data.lastModel || latestHistory?.model || "-",
     lastGeneratedAt: data.lastGeneratedAt || latestHistory?.createdAt || null,
-    generateToday: Number(today.generate || 0),
-    transcribeToday: Number(today.transcribe || 0),
+    generateToday: Math.max(Number(today.generate || 0), generateFromHistory),
+    transcribeToday: Math.max(Number(today.transcribe || 0), transcribeFromHistory),
     totalToday: Number(today.total || 0),
-    historyCount: (data.history || []).length,
+    historyCount: history.length,
     blueprintCount: (data.blueprints || []).length,
     updatedAt: data.updatedAt || null,
   };
