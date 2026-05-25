@@ -82,7 +82,7 @@ async function enforceDailyGenerateLimit(body) {
   return { requester, usage: db.usage || {}, day, workspaceId };
 }
 
-async function recordServerGenerateUsage(limitState) {
+async function recordServerGenerateUsage(limitState, result = {}) {
   if (!limitState) return null;
   if (limitState.skipped) {
     return { day: limitState.day, limit: null, remaining: null, admin: true };
@@ -93,7 +93,17 @@ async function recordServerGenerateUsage(limitState) {
   bucket.total = Number(bucket.total || 0) + 1;
   bucket.generate = Number(bucket.generate || 0) + 1;
   usage[limitState.day] = bucket;
-  await writeSupabaseDb({ ...db, usage }, limitState.workspaceId);
+  await writeSupabaseDb(
+    {
+      ...db,
+      usage,
+      lastProvider: result.provider || db.lastProvider || "",
+      lastModel: result.model || db.lastModel || "",
+      lastGeneratedAt: new Date().toISOString(),
+      lastUserEmail: limitState.requester?.email || db.lastUserEmail || "",
+    },
+    limitState.workspaceId,
+  );
   return {
     day: limitState.day,
     bucket,

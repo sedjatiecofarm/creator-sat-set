@@ -18,14 +18,15 @@ function summarizeWorkspace(row) {
   const today = data.usage?.[day] || { total: 0, generate: 0, transcribe: 0 };
   const activeBlueprint = (data.blueprints || []).find((item) => item.id === data.activeBlueprintId);
   const latestHistory = (data.history || [])[0];
-  const email = latestHistory?.userEmail || data.userEmail || "";
+  const email = data.lastUserEmail || latestHistory?.userEmail || data.userEmail || "";
 
   return {
     id: row.id,
     email,
     activeBrand: activeBlueprint?.context?.brandName || latestHistory?.brand || "-",
-    lastProvider: latestHistory?.provider || "-",
-    lastModel: latestHistory?.model || "-",
+    lastProvider: data.lastProvider || latestHistory?.provider || "-",
+    lastModel: data.lastModel || latestHistory?.model || "-",
+    lastGeneratedAt: data.lastGeneratedAt || latestHistory?.createdAt || null,
     generateToday: Number(today.generate || 0),
     transcribeToday: Number(today.transcribe || 0),
     totalToday: Number(today.total || 0),

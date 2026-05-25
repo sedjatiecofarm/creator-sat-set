@@ -1,4 +1,4 @@
-const { buildPrompt, callWithFallback, parseBody, sendJson } = require("./_shared");
+const { buildPrompt, callWithFallback, enforceDailyGenerateLimit, parseBody, recordServerGenerateUsage, sendJson } = require("./_shared");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -8,10 +8,12 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = await parseBody(req);
+    const limitState = await enforceDailyGenerateLimit(body);
     const prompt = buildPrompt(body);
     const result = await callWithFallback(prompt);
-    sendJson(res, 200, result);
+    const usage = await recordServerGenerateUsage(limitState, result);
+    sendJson(res, 200, { ...result, usage });
   } catch (error) {
-    sendJson(res, 500, { error: error.message || "Terjadi error di API generate." });
+    sendJson(res, error.statusCode || 500, { error: error.message || "Terjadi error di API generate." });
   }
 };
