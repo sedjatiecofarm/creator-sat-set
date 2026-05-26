@@ -424,11 +424,78 @@ function generationInstruction(part) {
     foreshadow:
       "Buat 3 pilihan foreshadow/janji konten. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Foreshadow harus membuat audiens punya alasan lanjut menonton/membaca. Setiap opsi wajib punya NASKAH, ARAH CERITA, dan VALUE. Jangan pakai pembuka/penutup di luar opsi.",
     body:
-      "Buat 3 pilihan isi konten. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Isi harus menyampaikan value yang jelas, relate dengan keresahan audiens, dan tidak terdengar seperti teori teknis pembuatan konten. Untuk Carousel, buat per slide. Untuk Story, buat frame singkat. Untuk Feed, buat copy/caption padat. Setiap opsi wajib punya NASKAH, VALUE, dan ARAH VISUAL. Jangan pakai pembuka/penutup di luar opsi.",
+      "Buat 3 pilihan ISI konten, bukan hook. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Isi harus berupa naskah utama yang menjelaskan value secara lengkap, relate dengan keresahan audiens, dan siap dibacakan/dieksekusi. Untuk Reels/TikTok/Shorts, buat isi dalam bentuk alur presenter + arahan visual yang cukup untuk durasi target. Untuk Carousel, buat per slide. Untuk Story, buat frame singkat berurutan. Untuk Feed, buat copy/caption padat. Setiap opsi wajib punya NASKAH PANJANG, VALUE, dan ARAH VISUAL. Jangan buat kalimat hook pendek. Jangan pakai pembuka/penutup di luar opsi.",
     cta:
       "Buat 3 pilihan CTA yang natural. Ikuti jenis konten, durasi, dan platform yang dipilih pengguna. Variasikan CTA untuk komentar, save/share, follow, konsultasi/chat, atau soft selling sesuai konteks. Setiap opsi wajib punya CTA dan TUJUAN. Jangan pakai pembuka/penutup di luar opsi.",
   };
   return map[part];
+}
+
+function optionFormatInstruction(part) {
+  const settings = getScriptSettings();
+  const duration = Number(settings.duration || 45);
+  const bodyLength =
+    duration >= 60
+      ? "minimal 140-190 kata atau 8-12 baris presenter"
+      : duration >= 45
+        ? "minimal 100-150 kata atau 6-9 baris presenter"
+        : "minimal 70-110 kata atau 4-7 baris presenter";
+
+  if (part === "hook") {
+    return `WAJIB hanya keluarkan daftar opsi, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3: dan seterusnya.
+
+Format per opsi:
+OPSI 1:
+TIPE HOOK: ...
+FORMAT: jenis konten, durasi, platform
+ANGLE: ...
+NASKAH: "..."
+ARAH VISUAL: ...
+VALUE/TUJUAN: ...
+
+NASKAH hook wajib 1 kalimat pendek maksimal 8-12 kata atau 90 karakter untuk 0-5 detik pertama. Jangan masukkan penjelasan edukasi di hook.`;
+  }
+
+  if (part === "body") {
+    return `WAJIB hanya keluarkan daftar opsi ISI KONTEN, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3:.
+
+Format per opsi:
+OPSI 1:
+JENIS ISI: edukasi / bukti / cerita / checklist / breakdown
+FORMAT: jenis konten, durasi, platform
+ANGLE: ...
+NASKAH:
+"..."
+VALUE/TUJUAN: ...
+ARAH VISUAL: ...
+
+NASKAH untuk bagian ISI wajib panjang dan substansial, ${bodyLength}. Jangan buat hook pendek. Jangan cuma 1 kalimat. Isi harus menjelaskan poin utama, contoh/bukti, dan alasan kenapa audiens perlu peduli.`;
+  }
+
+  if (part === "foreshadow") {
+    return `WAJIB hanya keluarkan daftar opsi FORESHADOW, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3:.
+
+Format per opsi:
+OPSI 1:
+JENIS FORESHADOW: ...
+FORMAT: jenis konten, durasi, platform
+NASKAH: "..."
+ARAH CERITA: ...
+VALUE/TUJUAN: ...
+
+Foreshadow harus berupa janji isi/alasan lanjut menonton, bukan hook dan bukan isi panjang.`;
+  }
+
+  return `WAJIB hanya keluarkan daftar opsi CTA, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3:.
+
+Format per opsi:
+OPSI 1:
+TIPE CTA: komentar / simpan / share / follow / chat / konsultasi
+FORMAT: jenis konten, durasi, platform
+CTA: "..."
+TUJUAN: ...
+
+CTA harus natural, spesifik, dan sesuai tahap konten.`;
 }
 
 const generators = {
@@ -1006,8 +1073,7 @@ async function generateOptions(part, topic, container, parts, draftTarget, trigg
     const text = await askAI({
       topic: `${cleanTopic}\n\nSETTING SCRIPT\n${scriptSettingsPrompt()}`,
       instruction: generationInstruction(part),
-      format:
-        `WAJIB hanya keluarkan daftar opsi, tanpa kalimat pembuka. Pisahkan setiap opsi dengan judul OPSI 1:, OPSI 2:, OPSI 3: dan seterusnya.\n\nFormat per opsi:\nOPSI 1:\nTIPE/CTA: ...\nFORMAT: jenis konten, durasi, platform\nANGLE: ...\nNASKAH: \"...\"\nARAH VISUAL: ...\nVALUE/TUJUAN: ...\n\nJika membuat Hook, NASKAH wajib 1 kalimat pendek maksimal 8-12 kata atau 90 karakter untuk 0-5 detik pertama. Jangan masukkan penjelasan edukasi di hook. Buat output dalam Bahasa Indonesia, spesifik untuk brand, target market, jenis konten, durasi, dan platform.`,
+      format: `${optionFormatInstruction(part)}\n\nBuat output dalam Bahasa Indonesia, spesifik untuk brand, target market, jenis konten, durasi, dan platform.`,
     });
     options = splitAIOptions(text);
   } catch (error) {
