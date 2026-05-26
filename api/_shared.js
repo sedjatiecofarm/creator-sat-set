@@ -7,6 +7,7 @@ const fallbackEnabled = process.env.AI_FALLBACK !== "false";
 const openAIModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const openRouterModel = process.env.OPENROUTER_MODEL || "openrouter/free";
 const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabaseTable = process.env.SUPABASE_TABLE || "creator_app_state";
@@ -22,6 +23,13 @@ const openRouterModels = (process.env.OPENROUTER_MODELS || "")
   .split(",")
   .map((item) => item.trim())
   .filter(Boolean);
+const defaultOpenRouterModels = [
+  openRouterModel,
+  "qwen/qwen3-235b-a22b:free",
+  "deepseek/deepseek-r1-0528:free",
+  "deepseek/deepseek-chat-v3-0324:free",
+  "google/gemma-3-27b-it:free",
+].filter(Boolean);
 
 function defaultDb() {
   return {
@@ -270,7 +278,7 @@ async function callGemini(prompt) {
 
 async function callOpenRouter(prompt) {
   const models = openRouterModels.length ? openRouterModels : await getOpenRouterFreeModels();
-  if (!models.length) throw new Error("Tidak ada model OpenRouter free yang tersedia. Isi OPENROUTER_MODELS di env.");
+  if (!models.length) throw new Error("Tidak ada model OpenRouter free yang tersedia. Isi OPENROUTER_MODEL atau OPENROUTER_MODELS di env.");
 
   const errors = [];
   for (const model of models) {
@@ -294,7 +302,7 @@ async function callOpenRouter(prompt) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || `OpenRouter gagal untuk model ${model}.`);
-      return { text: extractChatText(data), model };
+      return { text: extractChatText(data), model: data.model || model };
     } catch (error) {
       errors.push(`${model}: ${error.message}`);
     }
@@ -303,24 +311,29 @@ async function callOpenRouter(prompt) {
 }
 
 async function getOpenRouterFreeModels() {
-  const response = await fetch("https://openrouter.ai/api/v1/models");
-  const data = await response.json();
-  if (!response.ok) return [];
-  const preferred = ["qwen", "deepseek", "gemma"];
-  return (data.data || [])
-    .filter((model) => {
-      const id = String(model.id || "").toLowerCase();
-      const promptPrice = Number(model.pricing?.prompt || 1);
-      const completionPrice = Number(model.pricing?.completion || 1);
-      return preferred.some((name) => id.includes(name)) && promptPrice === 0 && completionPrice === 0;
-    })
-    .sort((a, b) => {
-      const aId = String(a.id || "").toLowerCase();
-      const bId = String(b.id || "").toLowerCase();
-      return preferred.findIndex((name) => aId.includes(name)) - preferred.findIndex((name) => bId.includes(name));
-    })
-    .slice(0, 6)
-    .map((model) => model.id);
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/models");
+    const data = await response.json();
+    if (!response.ok) return defaultOpenRouterModels;
+    const preferred = ["qwen", "deepseek", "gemma"];
+    const discovered = (data.data || [])
+      .filter((model) => {
+        const id = String(model.id || "").toLowerCase();
+        const promptPrice = Number(model.pricing?.prompt || 1);
+        const completionPrice = Number(model.pricing?.completion || 1);
+        return preferred.some((name) => id.includes(name)) && promptPrice === 0 && completionPrice === 0;
+      })
+      .sort((a, b) => {
+        const aId = String(a.id || "").toLowerCase();
+        const bId = String(b.id || "").toLowerCase();
+        return preferred.findIndex((name) => aId.includes(name)) - preferred.findIndex((name) => bId.includes(name));
+      })
+      .slice(0, 6)
+      .map((model) => model.id);
+    return [...new Set([...defaultOpenRouterModels, ...discovered])];
+  } catch (error) {
+    return defaultOpenRouterModels;
+  }
 }
 
 async function callGroq(prompt) {
